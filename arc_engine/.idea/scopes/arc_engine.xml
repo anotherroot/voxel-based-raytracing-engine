@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="arc_engine" pattern="file:test_android/CMakeLists.txt||file:test_android/build.gradle||file:test_android/settings.gradle||file[arc_engine]:test_android/app/src/*||file:test_android/app/build.gradle||file[arc_engine]:engine//*||file[arc_engine]:test_core//*||file[arc_engine]:test_desktop//*||file:CMakeLists.txt||file:extern/CMakeLists.txt" />
+</component>

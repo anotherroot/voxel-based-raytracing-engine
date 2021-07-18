@@ -1,0 +1,7 @@
+
+
+set( project_version 0.1.0 )
+
+set( project_description "Description")
+
+set( project_homepage "https://github.com/RootIsNameMy/arc_engine")
