@@ -10,11 +10,12 @@ project(
         LANGUAGES CXX C
 )
 
-add_library(core STATIC )
+add_library(core STATIC)
 target_sources(core
         PRIVATE
         src/game.cpp
         src/camera_controller.cpp
+        src/renderer_system.cpp
         )
 target_include_directories(core PUBLIC include)
-target_link_libraries(core PUBLIC arc_engine)
+target_link_libraries(core PUBLIC engine)

@@ -1,0 +1,6 @@
+
+
+set(project_version 1.0.0)
+
+
+set(DEBUG_MODE)
