@@ -24,9 +24,9 @@ void Game::Init() {
         true);
     frame_buffer_.Setup(config);
   }
-  voxel_shader_.Create("/home/tilen/Projects/diploma/impl/renderer/arc_engine/"
+  voxel_shader_.Create("/home/tilen/Projects/diploma/renderer/arc_engine/"
                        "engine/shaders/voxel_shader");
-  shadow_shader_.Create("/home/tilen/Projects/diploma/impl/renderer/arc_engine/"
+  shadow_shader_.Create("/home/tilen/Projects/diploma/renderer/arc_engine/"
                         "engine/shaders/voxel_shadow_shader");
   renderer_.Init();
   model_.Setup("walterwhite.vox");
