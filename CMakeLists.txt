@@ -11,6 +11,11 @@ project(
         LANGUAGES CXX C
 )
 
+set(CMAKE_CXX_STANDARD 17)
+set(ARC_PLATFORM_LINUX 1)
+set(ARC_PLATFORM_GLFW 1)
+set(ARC_PLATFORM_OPENGL 1)
+
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set( CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -40,7 +45,7 @@ endif()
 #-------------------------------------
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME) #TODO: check waht goes in here and what doesnt
     # C++ standard
-    set(CMAKE_CXX_STANDARD 14)
+    set(CMAKE_CXX_STANDARD 17)
 
     # Support for folders in IDE's
     set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -63,42 +68,20 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME) #TODO: check waht goes in here and
 endif ()
 #-------------------------------------
 
-# Submodules
-#-------------------------------------
-
-# find_package(GIT QUIET)
-# if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-#     option(GIT_SUBMODULE "Check submodules during build!" ON)
-#     if(GIT_SUBMODULE)
-#         message(STATUS "Submodule update!")
-#         execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} RESULT_VARIABLE GIT_SUBMOD_RESULT)
-#         if(NOT GIT_SUBMOD_RESULT EQUAL "0")
-#             message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
-#         endif()
-#     endif()
-# endif()
 
 
-#--------------------------------------------
-
-add_subdirectory(arc_engine)
 
 
-#  Game
-#--------------------------------------------
+add_subdirectory(external)
+add_subdirectory(engine)
 
 add_subdirectory(core)
 
-if (ANDROID)
-    add_subdirectory(android/app/src/main/cpp)
-    target_link_libraries(android PRIVATE core)
-elseif (UNIX)
-    add_executable(desktop)
-    target_sources(desktop PRIVATE desktop/main.cpp)
-    target_link_libraries(desktop PRIVATE core)
-else ()
-    message(FATAL_ERROR "Your platform is not supported!")
-endif ()
+add_executable(desktop)
 
-#--------------------------------------------
+target_sources(desktop
+  PRIVATE
+  desktop/main.cpp
+  )
 
+target_link_libraries(desktop PUBLIC core)
