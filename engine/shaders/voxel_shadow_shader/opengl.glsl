@@ -4,11 +4,10 @@
 
 
 layout(location = 0) in vec3 a_position;
-layout(location = 1) in vec3 a_tex_coords;
+layout(location = 1) in vec2 a_tex_coords;
 
 
 uniform mat4 u_view_projection;
-uniform mat4 u_transform;
 uniform vec3 u_origin;
 uniform vec3 u_box_position;
 uniform vec3 u_box_size;
@@ -17,17 +16,15 @@ uniform vec3 u_box_size;
 out vec3 v_position;
 out vec3 v_origin;
 out vec3 v_direction;
-out vec3 v_tex_coords;
+out vec2 v_tex_coords;
 
 
 
 void main()
 {
-    vec3 pos = vec3(u_transform* vec4(a_position,1));
-    v_position = pos;
-
+    v_position = a_position;
     v_tex_coords = a_tex_coords;
-    gl_Position =  u_view_projection*vec4(pos,1);
+    gl_Position =  vec4(a_position,1);
 }
 #type fragment
 #version 330 core
@@ -46,6 +43,9 @@ uniform vec2 u_window_size;
 uniform sampler2D u_albedo;
 uniform sampler2D u_normal;
 uniform sampler2D u_position;
+uniform sampler2D u_blue_noise;
+uniform int u_show_shadow_caster;
+uniform int u_frame_number;
 
 struct Light{
   vec3 position;
@@ -59,7 +59,7 @@ uniform Light u_lights[32];
 in vec3 v_position;
 in vec3 v_origin;
 in vec3 v_direction;
-in vec3 v_tex_coords;
+in vec2 v_tex_coords;
 
 
 uint GetVoxel(in vec3 coords){
@@ -102,15 +102,16 @@ RayHit GetOctreeHit(in uint value, in RayHit ray_hit,in Ray ray,in vec3 c,in vec
   float tMaxZ = abs(distZ/ray.direction.z);
     
   vec3 tDelta = abs(voxel_size/ray.direction);
-
+  vec4 color = vec4(0,0,0,1);
     while(true){
         if(ray_hit.distance > max_length){
             break;
         }
-        uint v = value&(uint(1)<<int(coords.x*4+coords.y*2 + coords.z));
+        uint v = value&(uint(1)<<int(coords.z*4+coords.y*2 + coords.x));
         if( v != uint(0)){
             ray_hit.hit = true;
             break;
+
         }
         if(tMaxX < tMaxY) {
             if(tMaxX < tMaxZ) {
@@ -196,7 +197,6 @@ RayHit algo(in Ray ray,  in vec3 b_size, in vec3 t_size, in float max_length){
         uint voxel = GetVoxel(coords);
         if( voxel != uint(0)){
             RayHit hit = GetOctreeHit(voxel,ray_hit, ray,coords, b_size, t_size, max_length);
-            /* ray_hit.hit = true; */
             if(hit.hit)
               return hit;
         }
@@ -234,21 +234,29 @@ RayHit algo(in Ray ray,  in vec3 b_size, in vec3 t_size, in float max_length){
 
 void main()
 {
-    vec3 position = texture(u_position,gl_FragCoord.xy/u_window_size).xyz;
-    vec3 normal = texture(u_normal,gl_FragCoord.xy/u_window_size).xyz;
-    vec3 albedo = texture(u_albedo,gl_FragCoord.xy/u_window_size).xyz;
+    vec3 position = texture(u_position,v_tex_coords).xyz;
+    vec3 normal = texture(u_normal,v_tex_coords).xyz;
+    vec3 albedo = texture(u_albedo,v_tex_coords).xyz;
+    vec3 blue = texture(u_blue_noise,v_tex_coords).xyz;
+    out_color = vec4(blue,1);
+    return;
+
     Ray ray;
     ray.origin = u_origin;
-    ray.direction = normalize(v_position - u_origin);
+    ray.direction = normalize(position - u_origin);
 
     /* vec3 position = u_origin + dist * ray.direction; */ 
     //ambient occlusion
 
-    /* RayHit hit = algo(ray,u_box_size,u_texture_size, 100); */
-    /* vec4 color = vec4(1,1,1,1); */
-    /* if(hit.hit){ */
-    /*   color = vec4(1,0.5,0.5,1); */
-    /* } */
+    if(u_show_shadow_caster == 1){
+      RayHit hit = algo(ray,u_box_size,u_texture_size, 100);
+      if(hit.hit){
+        out_color = vec4(0.25,0.75, 0.25,1);
+        return;
+      }
+    }
+
+
 
     //shadows
     vec3 light = vec3(0);
@@ -268,5 +276,5 @@ void main()
           light = u_lights[i].color;
         }
     }
-    out_color = vec4(albedo*(light+0.25),1);//*color;
+    out_color = vec4(albedo*(0.25 + 0.75*light),1);//*color;
 }

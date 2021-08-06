@@ -11,7 +11,7 @@ namespace arc{
       void Destroy();
       const Texture& texture() const {return texture_;}
       const glm::vec3 &size() const {return size_;}
-      void SetBits(const VoxelModel& model, const glm::vec3 &position);// TODO: add rotation and scale
+      void SetBits(const VoxelModel& model, const glm::mat4 &transform, bool set=true);// TODO: add rotation and scale
     private:
       uint8_t *data_;
       Texture texture_;

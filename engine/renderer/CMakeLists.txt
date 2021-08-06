@@ -28,6 +28,7 @@ target_sources(arc_renderer
             src/voxel_renderer.cpp
             src/perspective_camera.cpp
             src/shadow_texture.cpp
+            src/overlay_renderer.cpp
 
         )
 

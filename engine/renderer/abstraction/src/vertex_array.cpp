@@ -35,6 +35,7 @@ static GLenum ShaderDataTypeToOpenGLBaseType(ShaderDataType type) {
 void VertexArray::Setup() {
   arc_assert(!(*this), "VertexArray Setup failed! VertexArray already exists");
   glGenVertexArrays(1, &id_);
+  logi("vertex array setup {0}",id_);
 }
 
 void VertexArray::Dispose() {

@@ -25,7 +25,7 @@ void VoxelModel::Setup(const std::string &file_path) {
     logi("Instances: {0}", scene->num_instances);
     logi("Layers: {0}", scene->num_layers);
     logi("Models: {0}", scene->num_models);
-    
+
     bool added[256]{false};
     added[0] = true;
 
@@ -33,6 +33,7 @@ void VoxelModel::Setup(const std::string &file_path) {
     voxel_datas_ = new uint8_t *[scene->num_instances];
     shadow_masks_ = new uint8_t *[scene->num_instances];
     sizes_ = new glm::vec3[scene->num_instances];
+    raw_sizes_ = new glm::vec3[scene->num_instances];
     offsets_ = new glm::vec3[scene->num_instances];
 
     for (int inst = 0; inst < scene->num_instances; ++inst) {
@@ -77,6 +78,7 @@ void VoxelModel::Setup(const std::string &file_path) {
       offsets_[inst] -=
           glm::vec3(model->size_x, model->size_y, model->size_z) / 2.0f;
       sizes_[inst] = {x_size, y_size, z_size};
+      raw_sizes_[inst] = sizes_[inst];
       offsets_[inst] /= sizes_[inst];
       logi("fixed x: {0}", x_size);
       logi("fixed y: {0}", y_size);
@@ -84,7 +86,10 @@ void VoxelModel::Setup(const std::string &file_path) {
       size_t size1 = x_size * y_size * z_size;
       logi("size {0}", size1);
       voxel_datas_[inst] = new uint8_t[size1]{0};
-      shadow_masks_[inst] = new uint8_t[size1>>3]{0};
+      shadow_masks_[inst] = new uint8_t[size1 >> 3];
+      for (int i = 0; i < size1 >> 3; ++i) {
+        shadow_masks_[inst][i] = 0;
+      }
       for (int x = 0; x < model->size_x; ++x) {
         for (int y = 0; y < model->size_y; ++y) {
           for (int z = 0; z < model->size_z; ++z) {
@@ -95,11 +100,20 @@ void VoxelModel::Setup(const std::string &file_path) {
           }
         }
       }
-      for (int x = 0; x < model->size_x; ++x) {
-        for (int y = 0; y < model->size_y; ++y) {
+
+      for (int y = 0; y < model->size_y; ++y) {
+        for (int x = 0; x < model->size_x; ++x) {
           for (int z = 0; z < model->size_z; ++z) {
-            int i = z * x_size * y_size + y * x_size + x;
+            int i = x * z_size * y_size + y * z_size + z;
+            int is =
+                (x / 2) * z_size * y_size / 4 + (y / 2) * z_size / 2 + z / 2;
+            int ib = 1 << ((x & 1) * 4 + (y & 1) * 2 + (z & 1));
             uint8_t color = voxel_datas_[inst][i];
+            /* printf("%d", (bool)color); */
+            if (color) {
+              shadow_masks_[inst][is] |= ib;
+            }
+
             if (!added[color]) {
               added[color] = true;
               materials_.push_back({{scene->palette.color[color].r / 255.0f,
@@ -109,10 +123,16 @@ void VoxelModel::Setup(const std::string &file_path) {
             }
             voxel_datas_[inst][i] = material_lookup_[color];
           }
+          /* printf("\n"); */
         }
+        /* printf("\n"); */
+        /* printf("\n"); */
       }
-      TextureConfig config = {TextureConfig::R, TextureConfig::UNSIGNED_BYTE, TextureConfig::NEAREST};
-      textures_[inst].Setup(x_size, y_size, z_size, voxel_datas_[inst], config);
+
+
+      TexConf config = {TexConf::R, TexConf::UNSIGNED_BYTE,
+                              TexConf::NEAREST};
+      textures_[inst].Setup3D(x_size, y_size, z_size, voxel_datas_[inst], config);
     }
     ogt_vox_destroy_scene(scene);
     file.close();
@@ -127,7 +147,9 @@ void VoxelModel::Dispose() {
   setup_ = false;
   delete[] textures_;
   delete[] voxel_datas_;
+  delete[] shadow_masks_;
   delete[] sizes_;
+  delete[] raw_sizes_;
   delete[] offsets_;
 }
 } // namespace arc

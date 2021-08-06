@@ -9,8 +9,10 @@ namespace arc {
 
 class Texture {
 public:
-  void Setup(int width, int height, int depth, void *data,
-             const TextureConfig &config);
+  void Setup3D(int width, int height, int depth, void *data,
+             const TexConf &config);
+  void Setup2D(int width, int height, void *data,
+             const TexConf &config);
   void Dispose();
   ~Texture() { Dispose(); }
   operator bool() const { return id_; }
@@ -22,7 +24,7 @@ public:
   unsigned int depth() const { return depth_; }
   unsigned int renderer_id() const { return id_; };
 
-  void set_data(void *data, unsigned int size);
+  void set_data(void *data, int sw, int sh, int sd, int width, int height, int depth);
 
   void Bind(unsigned int slot) const;
   bool Equal(const Texture &other) const { return id_ == other.renderer_id(); }

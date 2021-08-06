@@ -1,4 +1,5 @@
 #include "shadow_texture.h"
+#include <glm/gtc/matrix_transform.hpp>
 namespace arc {
 void ShadowTexture::Init(uint width, uint height, uint depth,
                          const glm::vec3 &size, const glm::vec3 &pos) {
@@ -19,63 +20,70 @@ void ShadowTexture::Init(uint width, uint height, uint depth,
   size_ = size;
   pos_ = pos;
   data_ = new uint8_t[width_ * height_ * depth_ / 8];
-  for (int i = 0; i < width_ >> 1; ++i) {
-    for (int j = 0; j < height_ >> 1; ++j) {
-      for (int k = 0; k < depth_ >> 1; ++k) {
-        int index = i * height_ * depth_ / 4 + j * depth_ / 2 + k; 
-        data_[i * height_ * depth_ / 4 + j * depth_ / 2 + k] = 0b00000000;
-        if (i == width_ >> 2 && j == width_ >> 2)
-          data_[i * height_ * depth_ / 4 + j * depth_ / 2 + k] = index&255;
-        if (k == width_ >> 2 && j == width_ >> 2)
-          data_[i * height_ * depth_ / 4 + j * depth_ / 2 + k] = index&255;
-      }
-    }
+  for (int i = 0; i < width_ * height_ * depth_ / 8; ++i) {
+    data_[i] = 0b00000000;
   }
-  texture_.Setup(
+  texture_.Setup3D(
       width_ >> 1, height_ >> 1, depth_ >> 1, data_,
-      {TextureConfig::R, TextureConfig::UNSIGNED_BYTE, TextureConfig::NEAREST});
+      {TexConf::R, TexConf::UNSIGNED_BYTE, TexConf::NEAREST});
 }
 
 void ShadowTexture::Destroy() {
+
   delete[] data_;
   texture_.Dispose();
 }
 
-void ShadowTexture::SetBits(const VoxelModel &model,
-                            const glm::vec3 &position) {
-  uint8_t *data = model.data(0);
-  glm::vec3 size = model.size(0);
-  int width = size.x, height = size.z, depth = size.y;
-  glm::vec3 start = glm::vec3(width_ >> 1, height_ >> 1, depth_ >> 1) +
-                    position / 0.1f; // TODO: 0.1f is the size of the voxel..
+void ShadowTexture::SetBits(const VoxelModel &model, const glm::mat4 &transform,
+                            bool set) {
+  uint8_t *mask = model.shadow_mask(0);
+  auto size = model.raw_size(0);
+  int width = size.x, height = size.y, depth = size.z;
+  int sw=width_, sh=height_, sd = depth_;//where to start updating the texture
+  int ew=0, eh=0, ed = 0;//where to start updating the texture
+  for (int x = 0; x < width; ++x) {
+    for (int y = 0; y < height; ++y) {
+      for (int z = 0; z < depth; ++z) {
+        int i = z / 2 * height * width / 4 + y / 2 * width / 2 + x / 2;
+        uint8_t ib = 1 << ((z & 1) * 4 + (y & 1) * 2 + (x & 1));
+        uint8_t val = mask[i] & ib;
+        if (val) {
+          glm::vec4 in_vec = {x, y, z, 0};
+          in_vec.x += -model.size(0).x / 2;
+          in_vec.y += -model.size(0).y / 2;
+          in_vec.z += -model.size(0).z / 2;
+          glm::vec4 out_vec = transform * in_vec;
+          int x2 = glm::round(out_vec.x + width_ / 2 +
+                              transform[3].x *
+                                  10); 
+                                      
+          int y2 = glm::round(out_vec.y + height_ / 2 + transform[3].y * 10);
+          int z2 = glm::round(out_vec.z + depth_ / 2 + transform[3].z * 10);
+          if (x2 < 0 || x2 > width_ || y2 < 0 || y2 > height_ || z2 < 0 ||
+              z2 > depth_) {
+            continue;
+          }
+          // update bounds
+          sw = glm::min(sw,x2/2); 
+          sh = glm::min(sh,y2/2); 
+          sd = glm::min(sd,z2/2); 
+          ew = glm::max(ew,x2/2); 
+          eh = glm::max(eh,y2/2); 
+          ed = glm::max(ed,z2/2); 
 
-  for (int i = 0; i < width; ++i) {
-    int si = i + start.x;
-    /* if (si >= width_ || si < 0) */
-    /*   continue; */
-    for (int j = 0; j < height; ++j) {
-      int sj = j + start.y;
-      /* if (sj >= height_ || sj < 0) */
-      /*   continue; */
-      for (int k = 0; k < depth; ++k) {
-        int sk = k + start.z;
-        /* if (sk >= depth_ || sk < 0) */
-        /*   continue; */
-        data_[i * height * depth + k * width + j] = data[i * height * depth + j * depth + k];
-
-          /* data_[(si >> 1) * height * (depth >> 2) + (sj >> 1) * (depth >> 1) + */
-                /* (sk >> 1)] |= 1 << ((si & 1) * 4 + (sj & 1) * 2 + sk & 1); */
-          /* logi("{0}, {1}, {2} => {3} {4}, {5}, => {6}", i, j, k, si, sj, sk, */
-          /*      data_[(si >> 1) * height * (depth >> 2) + */
-                     /* (sj >> 1) * (depth >> 1) + (sk >> 1)]); */
+          // update array
+          if (set)
+            data_[(z2 / 2) * height_ * width_ / 4 + (y2 / 2) * width_ / 2 +
+                  (x2 / 2)] |= 1 << ((z2 & 1) * 4 + (y2 & 1) * 2 + (x2 & 1));
+          else
+            data_[(z2 / 2) * height_ * width_ / 4 + (y2 / 2) * width_ / 2 +
+                  (x2 / 2)] = 0;
+        }
       }
     }
   }
-  data_[((width_ >> 2) + 1) * height_ * depth_ / 4 + (height_ >> 2) * depth_ / 2 +
-        (depth_ >> 2) + 1] = 128;
-  int ex = glm::min((int)start.x + width, (int)width_);
-  int ey = glm::min((int)start.y + height, (int)height_);
-  int ez = glm::min((int)start.z + depth, (int)depth_);
-  texture_.set_data(data_, 0);
+  if(sh == height_) return;
+
+  texture_.set_data(data_, 0,0,0,width_/2,height_/2,depth_/2);
 }
 } // namespace arc

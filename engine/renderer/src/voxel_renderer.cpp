@@ -37,9 +37,9 @@ void VoxelRenderer::Init() {
   vertex_array_.BindVertexBuffer(vertex_buffer_);
 
   uint8_t data = 1;
-  box_texture_.Setup(
+  box_texture_.Setup3D(
       1, 1, 1, &data,
-      {TextureConfig::R, TextureConfig::UNSIGNED_BYTE, TextureConfig::NEAREST});
+      {TexConf::R, TexConf::UNSIGNED_BYTE, TexConf::NEAREST});
 }
 
 void VoxelRenderer::Destroy() {}
@@ -50,12 +50,16 @@ void VoxelRenderer::Begin(Shader &shader, const PerspectiveCamera &camera) {
   shader.SetFloat3("u_origin", glm::inverse(camera.view())[3]);
   shader.SetInt("u_texture", 1);
   vertex_array_.Bind();
+  index_buffer_.Bind();
+  vertex_buffer_.Bind();
 }
 
 void VoxelRenderer::End(Shader &shader) { Flush(shader); }
 
 void VoxelRenderer::Flush(Shader &shader) {
 
+  index_buffer_.Unbind();
+  vertex_buffer_.Unbind();
   vertex_array_.Unbind();
   shader.Unbind();
 }
@@ -181,6 +185,7 @@ void VoxelRenderer::DrawTexture(Shader &shader, const Texture &texture,
                     size.z * texture.depth()});
   texture.Bind(1);
   RendererAPI::DrawIndexed(vertex_array_, 36);
+
 }
 void VoxelRenderer::DrawBox(Shader &shader, const glm::mat4 &trans,
                             const glm::vec3 &size,

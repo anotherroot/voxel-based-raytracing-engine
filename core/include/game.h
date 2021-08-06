@@ -20,7 +20,11 @@ private:
   arc::Scene scene_;
   arc::VoxelModel guy_model_, floor_;
   RendererSystem renderer_system_;
-  arc::Entity guy_;
+  arc::Entity guy_, guy3_;
+
+  float num_frames_{0};
+  float fps_{0};
+  float second_{0};
 };
 
 #endif // ARC_ENGINE_BATTLEMAPAPP_H

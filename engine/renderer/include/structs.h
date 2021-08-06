@@ -2,7 +2,7 @@
 #define ARC_ENGINE_STRUCTS_H
 #include "core.h"
 namespace arc {
-struct TextureConfig {
+struct TexConf {
   enum InternalFormat { R, RG, RGB, RGBA, DEPTH, STENCIL };
   enum DataFormat {
     UNSIGNED_BYTE,
@@ -20,8 +20,8 @@ struct TextureConfig {
   Interpolation interpolation;
 };
 struct FrameBufferConfig {
-  std::vector<TextureConfig> frames;
-  FrameBufferConfig(uint w,uint h,uint samp,const std::initializer_list<TextureConfig> &f, bool ds) : frames(f), width(w), height(h), samples(samp), depth_stencil(ds) {}
+  std::vector<TexConf> frames;
+  FrameBufferConfig(uint w,uint h,uint samp,const std::initializer_list<TexConf> &f, bool ds) : frames(f), width(w), height(h), samples(samp), depth_stencil(ds) {}
   uint width, height;
   uint samples;
   bool depth_stencil;

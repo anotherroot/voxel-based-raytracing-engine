@@ -56,8 +56,31 @@ namespace arc {
 
 /* Texture::~Texture() { glDeleteTextures(1, &id_); } */
 
-void Texture::Setup(int width, int height, int depth, void *data,
-                    const TextureConfig &config) {
+void Texture::Setup2D(int width, int height, void *data, const TexConf& config){
+  arc_assert(!(*this), "Texture Setup failed! Texture already exists");
+  width_ = width;
+  height_ = height;
+  depth_ = 0;
+
+  data_format_ = GetDataFormat(config);
+  internal_format_ = GetInternalFormat(config);
+
+  glCreateTextures(GL_TEXTURE_2D, 1, &id_);
+  logi("texture id is {0}", id_);
+  uint interpolation =
+      TexConf::NEAREST == config.interpolation ? GL_NEAREST : GL_LINEAR;
+  glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, interpolation);
+  glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, interpolation);
+
+  glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+  glTextureStorage2D(id_, 1, GetSizedInternalFormat(config), width_, height_);
+  glTextureSubImage2D(id_, 0, 0, 0, width_, height_,
+                      internal_format_, data_format_, data);
+}
+void Texture::Setup3D(int width, int height, int depth, void *data,
+                    const TexConf &config) {
   arc_assert(!(*this), "Texture Setup failed! Texture already exists");
   width_ = width;
   height_ = height;
@@ -69,9 +92,10 @@ void Texture::Setup(int width, int height, int depth, void *data,
   glCreateTextures(GL_TEXTURE_3D, 1, &id_);
   logi("texture id is {0}", id_);
   uint interpolation =
-      TextureConfig::NEAREST == config.interpolation ? GL_NEAREST : GL_LINEAR;
+      TexConf::NEAREST == config.interpolation ? GL_NEAREST : GL_LINEAR;
   glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, interpolation);
   glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, interpolation);
+
 
   glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP);
@@ -89,12 +113,16 @@ void Texture::Dispose() {
   }
 }
 
-void Texture::set_data(void *data, unsigned int size) {
+void Texture::set_data(void *data, int sw, int sh, int sd, int width, int height, int depth) {
   glBindTexture(GL_TEXTURE_3D, id_);
-  glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, width_, height_, depth_,
+  glTexSubImage3D(GL_TEXTURE_3D, 0, sw, sh, sd, width, height, depth,
                   internal_format_, data_format_, data);
   glBindTexture(GL_TEXTURE_3D, 0);
 }
-void Texture::Bind(unsigned int slot) const { glBindTextureUnit(slot, id_); }
+void Texture::Bind(unsigned int slot) const { 
+
+  glBindTextureUnit(slot, id_); 
+
+}
 
 } // namespace arc

@@ -13,6 +13,8 @@ public:
   int num_instances() const { return num_instances_; }
   const std::vector<Material> &materials() const { return materials_; }
   const glm::vec3 &size(int inst) const {return sizes_[inst];}
+  const glm::vec3 &raw_size(int inst) const {return raw_sizes_[inst];}
+  const glm::vec3 &offset(int inst) const {return offsets_[inst];}
 
 private:
   bool setup_{false};
@@ -20,6 +22,7 @@ private:
 
   int num_instances_;
   glm::vec3 *sizes_;
+  glm::vec3 *raw_sizes_;
   glm::vec3 *offsets_;
   uint8_t **voxel_datas_;
   uint8_t **shadow_masks_;
