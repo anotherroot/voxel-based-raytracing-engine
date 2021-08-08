@@ -34,6 +34,7 @@ namespace arc{
             arc_core_assert(instance_ == nullptr,"Application already exists");
             instance_ = this;
             config_ = config;//TODO: check config asset folder (set to executable location if not set) also set to android
+            logi("asset folder: {0}", config_.asset_folder);
             EventHandler::Init();
 
             window_.Setup({config_.title, 1280, 720});

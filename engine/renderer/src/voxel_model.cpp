@@ -32,10 +32,11 @@ void VoxelModel::Setup(const std::string &file_path) {
     textures_ = new Texture[scene->num_instances];
     voxel_datas_ = new uint8_t *[scene->num_instances];
     shadow_masks_ = new uint8_t *[scene->num_instances];
+    active_shadow_masks_ = new uint8_t *[scene->num_instances];
     sizes_ = new glm::vec3[scene->num_instances];
     raw_sizes_ = new glm::vec3[scene->num_instances];
     offsets_ = new glm::vec3[scene->num_instances];
-
+    shadow_bounds_ = new Bounds[scene->num_instances];
     for (int inst = 0; inst < scene->num_instances; ++inst) {
       auto model = scene->models[scene->instances[inst].model_index];
       logi("x: {0}", model->size_x);
@@ -87,6 +88,7 @@ void VoxelModel::Setup(const std::string &file_path) {
       logi("size {0}", size1);
       voxel_datas_[inst] = new uint8_t[size1]{0};
       shadow_masks_[inst] = new uint8_t[size1 >> 3];
+      active_shadow_masks_[inst] = new uint8_t[size1 ];// 2 times larger in every direction
       for (int i = 0; i < size1 >> 3; ++i) {
         shadow_masks_[inst][i] = 0;
       }
@@ -129,10 +131,9 @@ void VoxelModel::Setup(const std::string &file_path) {
         /* printf("\n"); */
       }
 
-
-      TexConf config = {TexConf::R, TexConf::UNSIGNED_BYTE,
-                              TexConf::NEAREST};
-      textures_[inst].Setup3D(x_size, y_size, z_size, voxel_datas_[inst], config);
+      TexConf config = {TexConf::R, TexConf::UNSIGNED_BYTE, TexConf::NEAREST};
+      textures_[inst].Setup3D(x_size, y_size, z_size, voxel_datas_[inst],
+                              config);
     }
     ogt_vox_destroy_scene(scene);
     file.close();
@@ -145,11 +146,17 @@ void VoxelModel::Dispose() {
   if (!setup_)
     return;
   setup_ = false;
-  delete[] textures_;
+  for (int i = 0; i < num_instances_; ++i) {
+    delete[] voxel_datas_[i];
+    delete[] shadow_masks_[i];
+    delete[] active_shadow_masks_[i];
+  }
   delete[] voxel_datas_;
   delete[] shadow_masks_;
+  delete[] active_shadow_masks_;
   delete[] sizes_;
   delete[] raw_sizes_;
   delete[] offsets_;
+  delete[] textures_;
 }
 } // namespace arc

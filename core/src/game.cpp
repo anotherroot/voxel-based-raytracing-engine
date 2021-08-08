@@ -2,59 +2,44 @@
 #include "components.h"
 #include "engine.h"
 #include "entity.h"
+#include "func.h"
 #include "functions.h"
 #include "glad/glad.h"
 #include "imgui.h"
 #include "renderer_api.h"
+#include "string"
 #include "structs.h"
-#include <glm/gtc/matrix_transform.hpp>
-
 void Game::Init() {
+  arc::Engine::window().SetVsync(false);
   scene_.Setup("Main Scene");
-  {
-    guy_ = scene_.CreateEntity("Guy");
-    guy_model_.Setup("walterwhite.vox");
-    auto mc = guy_.Add<arc::ModelComponent>(&guy_model_);
-    auto &t = guy_.Get<arc::TransformComponent>();
-    t.transform = glm::translate(t.transform, glm::vec3(-2, -2, -2));
-  }
 
   {
-    auto guy = scene_.CreateEntity("Guy2");
-    auto mc = guy.Add<arc::ModelComponent>(&guy_model_);
-    auto &t = guy.Get<arc::TransformComponent>();
-    t.transform =
-        glm::rotate(t.transform, glm::radians(-90.0f), glm::vec3(1, 0, 0));
-    t.transform =
-        glm::rotate(t.transform, glm::radians(-30.0f), glm::vec3(0, 0, 1));
-  }
-  {
-    guy3_ = scene_.CreateEntity("Guy3");
-    auto mc = guy3_.Add<arc::ModelComponent>(&guy_model_);
-    auto &t = guy3_.Get<arc::TransformComponent>();
+    guy_model_.Setup("walterwhite.vox");
+    for (int i = 0; i < 5; ++i) {
+      for (int j = 0; j < 5; ++j) {
+        auto guy = scene_.CreateEntity("Guy" + std::to_string(i));
+        guy.Add<arc::ModelComponent>(&guy_model_);
+        arc::Rotate(guy, -90, {1, 0, 0});
+        arc::Translate(guy, {i*3 -6.5, j*3 -7.6, 0});
+        walters_.push_back(guy);
+      }
+    }
   }
 
   {
     auto floor = scene_.CreateEntity("Floor");
     floor.Add<arc::BoxComponent>(glm::vec3(1, 1, 1), glm::vec3(20, 0.5, 20));
-    auto &t = floor.Get<arc::TransformComponent>();
-    t.transform = glm::translate(t.transform, {0, -13, 0});
+    arc::Translate(floor, {0, -3, 0});
   }
   {
 
-    auto light = scene_.CreateEntity("light");
-    auto &trans = light.Get<arc::TransformComponent>().transform;
-    trans = glm::translate(trans, {-5, 10, -2});
-    light.Add<arc::LightComponent>(100.0f, 0.0f, glm::vec3(1, 1, 1));
+    light_ = scene_.CreateEntity("light");
+    auto &trans = light_.Get<arc::TransformComponent>().transform;
+    light_.Add<arc::BoxComponent>(glm::vec3(1, 0, 0), glm::vec3(0.3));
+    arc::Translate(light_, {-5, 10, -2});
+    light_.Add<arc::LightComponent>(100.0f, 0.0f, glm::vec3(1, 1, 1));
   }
 
-  /* { */
-  /*   auto light = scene_.CreateEntity("light2"); */
-  /*   auto &trans = light.Get<arc::TransformComponent>().transform; */
-  /*   trans = glm::translate(trans, {-5, 7, -3}); */
-  /*   light.Add<arc::LightComponent>(100.0f, 0.0f, glm::vec3{1, 0.25, 0.25});
-   */
-  /* } */
   renderer_system_.Setup(scene_);
 }
 
@@ -73,20 +58,12 @@ void Game::Update() {
     fps_ = num_frames_ / 2;
     num_frames_ = 0;
   }
-  { // roatating guy
-    auto &t = guy_.Get<arc::TransformComponent>();
-    t.transform = glm::rotate(t.transform, (float)arc::Engine::delta_time(),
-                              glm::vec3(0, 1, 0));
-    t.transform = glm::rotate(t.transform, (float)-arc::Engine::delta_time(),
-                              glm::vec3(1, 0, 0));
-  }
+
   {
-    auto &t = guy3_.Get<arc::TransformComponent>();
-    t.transform = glm::translate(
-        glm::mat4(1), 5.0f * glm::vec3(glm::cos(arc::Engine::running_time()), 0,
-                                       glm::sin(arc::Engine::running_time())));
-    t.transform =
-        glm::rotate(t.transform, glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    /* float cos = glm::cos(arc::Engine::running_time() ); */
+    /* float sin = glm::sin(arc::Engine::running_time() ); */
+    /* arc::SetPosition( */
+    /*     light_, glm::vec3(cos*5, 8,sin*5)); */
   }
   renderer_system_.Update(scene_);
 }
@@ -96,28 +73,56 @@ void Game::ImGuiRender() {
   ImGui::Begin("fps");
   ImGui::Text(std::to_string(fps_).c_str());
   ImGui::End();
-  /* int i = 0; */
-  /* ImGui::Text("albedo"); */
-  /* ImGui::Image(reinterpret_cast<ImTextureID>(frame_buffer_.GetAttachment(i++)),
-   */
-  /*              ImVec2(arc::Engine::window().width() / 2, */
-  /*                     arc::Engine::window().height() / 2), */
-  /*              ImVec2(0, 1), ImVec2(1, 0)); */
-  /* ImGui::Text("normal"); */
-  /* ImGui::Image(reinterpret_cast<ImTextureID>(frame_buffer_.GetAttachment(i++)),
-   */
-  /*              ImVec2(arc::Engine::window().width() / 2, */
-  /*                     arc::Engine::window().height() / 2), */
-  /*              ImVec2(0, 1), ImVec2(1, 0)); */
-  /* ImGui::Text("position"); */
-  /* ImGui::Image(reinterpret_cast<ImTextureID>(frame_buffer_.GetAttachment(i++)),
-   */
-  /*              ImVec2(arc::Engine::window().width() / 2, */
-  /*                     arc::Engine::window().height() / 2), */
-  /*              ImVec2(0, 1), ImVec2(1, 0)); */
-  /* ImGui::Text("depth"); */
-  /* ImGui::Image(reinterpret_cast<ImTextureID>(frame_buffer_.GetAttachment(i)),
-   */
-  /*              ImVec2(500, 500), ImVec2(0, 1), ImVec2(1, 0)); */
-  /* ImGui::End(); */
+
+  int i = 0;
+  ImGui::Text("albedo");
+  ImGui::Image(reinterpret_cast<ImTextureID>(
+                   renderer_system_.frame_buffer_.GetAttachment(i++)),
+               ImVec2(arc::Engine::window().width() / 2,
+                      arc::Engine::window().height() / 2),
+               ImVec2(0, 1), ImVec2(1, 0));
+  ImGui::Text("normal");
+  ImGui::Image(reinterpret_cast<ImTextureID>(
+                   renderer_system_.frame_buffer_.GetAttachment(i++)),
+               ImVec2(arc::Engine::window().width() / 2,
+                      arc::Engine::window().height() / 2),
+               ImVec2(0, 1), ImVec2(1, 0));
+  ImGui::Text("position");
+  ImGui::Image(reinterpret_cast<ImTextureID>(
+                   renderer_system_.frame_buffer_.GetAttachment(i++)),
+               ImVec2(arc::Engine::window().width() / 2,
+                      arc::Engine::window().height() / 2),
+               ImVec2(0, 1), ImVec2(1, 0));
+
+  ImGui::Text("position");
+  ImGui::Image(reinterpret_cast<ImTextureID>(
+                   renderer_system_.frame_buffer_.GetAttachment(i++)),
+               ImVec2(arc::Engine::window().width() / 2,
+                      arc::Engine::window().height() / 2),
+               ImVec2(0, 1), ImVec2(1, 0));
+  ImGui::Text("direct");
+  ImGui::Image(reinterpret_cast<ImTextureID>(
+                   renderer_system_.shadow_fb_.GetAttachment(0)),
+               ImVec2(arc::Engine::window().width() / 2,
+                      arc::Engine::window().height() / 2),
+               ImVec2(0, 1), ImVec2(1, 0));
+  ImGui::Text("ambient");
+  ImGui::Image(reinterpret_cast<ImTextureID>(
+                   renderer_system_.shadow_fb_.GetAttachment(1)),
+               ImVec2(arc::Engine::window().width() / 2,
+                      arc::Engine::window().height() / 2),
+               ImVec2(0, 1), ImVec2(1, 0));
+  ImGui::Text("ambient gauss");
+  ImGui::Image(reinterpret_cast<ImTextureID>(
+                   renderer_system_.single_fb_[1].GetAttachment(0)),
+               ImVec2(arc::Engine::window().width() / 2,
+                      arc::Engine::window().height() / 2),
+               ImVec2(0, 1), ImVec2(1, 0));
+  ImGui::Text("ambient gauss^2");
+  ImGui::Image(reinterpret_cast<ImTextureID>(
+                   renderer_system_.single_fb_[0].GetAttachment(0)),
+               ImVec2(arc::Engine::window().width() / 2,
+                      arc::Engine::window().height() / 2),
+               ImVec2(0, 1), ImVec2(1, 0));
+  ImGui::End();
 }

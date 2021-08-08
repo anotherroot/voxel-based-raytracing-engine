@@ -16,6 +16,7 @@ target_sources(core
         src/game.cpp
         src/camera_controller.cpp
         src/renderer_system.cpp
+        src/func.cpp
         )
 target_include_directories(core PUBLIC include)
 target_link_libraries(core PUBLIC engine)

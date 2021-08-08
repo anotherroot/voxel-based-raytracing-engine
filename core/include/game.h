@@ -20,7 +20,8 @@ private:
   arc::Scene scene_;
   arc::VoxelModel guy_model_, floor_;
   RendererSystem renderer_system_;
-  arc::Entity guy_, guy3_;
+  arc::Entity light_;
+  std::vector<arc::Entity> walters_;
 
   float num_frames_{0};
   float fps_{0};

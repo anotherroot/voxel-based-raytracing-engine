@@ -46,6 +46,7 @@ layout(location = 0) out vec4 out_color;
 
 layout(location = 1) out vec4 out_normal;
 layout(location = 2) out vec4 out_position;
+layout(location = 3) out vec4 out_buffer;
 
 uniform vec3 u_texture_size;
 uniform vec3 u_box_position;
@@ -61,6 +62,15 @@ struct Material{
 uniform Material u_materials[256];
 
 
+struct Light{
+  vec3 position;
+  float long_range;
+  float short_range;
+  vec3 color;
+};
+
+uniform int u_num_lights;
+uniform Light u_lights[32];
 
 in vec3 v_position;
 in vec3 v_origin;
@@ -75,8 +85,8 @@ uint GetVoxel(in vec3 coords){
 struct Ray{
     vec3 origin;
     vec3 direction;
-
 };
+
 struct RayHit{
     bool hit;
     vec3 normal;
@@ -85,7 +95,7 @@ struct RayHit{
 };
 
 
-RayHit algo(in Ray ray,  in vec3 b_pos, in vec3 b_size, in vec3 t_size, in vec3 in_normal){
+RayHit algo(in Ray ray,  in vec3 b_pos, in vec3 b_size, in vec3 t_size, in vec3 in_normal, in float len){
     RayHit ray_hit;
     ray_hit.hit = false;
     ray_hit.distance = 0;
@@ -151,6 +161,7 @@ RayHit algo(in Ray ray,  in vec3 b_pos, in vec3 b_size, in vec3 t_size, in vec3 
 
     while(true){
         uint voxel = GetVoxel(coords);
+        if(ray_hit.distance > len) break;
         if( voxel != uint(0)){
             ray_hit.material = int(voxel)-1;
             ray_hit.hit = true;
@@ -229,10 +240,10 @@ void main()
 
 
 
-    RayHit hit = algo(ray, u_box_position, u_box_size, u_texture_size, in_normal);
+    RayHit hit = algo(ray, u_box_position, u_box_size, u_texture_size, in_normal,100);
     if(hit.hit){
         vec4 normal = vec4(normalize(vec3(u_transform*vec4(hit.normal,0))/u_box_size),1);
-        out_normal = normal;//normal/2 +0.5;
+        out_normal = normal/2 +0.5;
 
         vec3 dir = normalize(v_position - u_origin);
         vec3 pos = u_origin + (d_to_box + hit.distance)*dir;
@@ -244,7 +255,36 @@ void main()
         /* float diffuse = 0.75 + 0.25 * clamp(dot(normalize(vec3(2,3,1)),normal.xyz),-1,1); */
         //diffuse = 1;
         /* vec4 color = vec4(u_materials[hit.material].color*diffuse,1); */
+        uint shadow = uint(0);
         vec4 color = vec4(u_materials[hit.material].color,1);
+        if(int(u_texture_size.x) != 1){
+        for(int i=0;i<u_num_lights;++i){
+          vec3 p = vec3(inverse(u_transform)*vec4(u_lights[i].position,1));
+          p*= u_box_size; 
+
+          ray.origin = ray.origin + hit.distance*ray.direction + hit.normal.xyz*0.001;
+          vec3 dir = p - ray.origin; 
+          ray.direction =normalize(dir); 
+
+          if(length(dir)>u_lights[i].long_range){
+            shadow|=uint(1)<<i;
+            continue;
+          }
+           
+          float diff = max(dot(ray.direction, hit.normal),0.0);
+          if(diff<0.001){
+            shadow|=uint(1)<<i;
+            continue;
+          }
+          
+          RayHit shadow_hit = algo(ray,u_box_position, u_box_size, u_texture_size, in_normal, length(dir));   
+          if(shadow_hit.hit){
+            shadow|=uint(1)<<i;
+          }
+        }
+        }
+        out_buffer = vec4(float(shadow)/256,0,0,1);
+
         //color = normal;
         out_color=color;
 

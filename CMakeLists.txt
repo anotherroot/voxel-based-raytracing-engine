@@ -20,23 +20,24 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set( CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 
+
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g")
 SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -g")
 
-# CCACHE
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-endif()
-# GOLD LINKER
-if (UNIX AND NOT APPLE)
-  execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE ld_version)
-  if ("${ld_version}" MATCHES "GNU gold")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags")
-  endif()
-endif()
+# # CCACHE
+# find_program(CCACHE_PROGRAM ccache)
+# if(CCACHE_PROGRAM)
+#     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+# endif()
+# # GOLD LINKER
+# if (UNIX AND NOT APPLE)
+#   execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE ld_version)
+#   if ("${ld_version}" MATCHES "GNU gold")
+#     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags")
+#     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags")
+#   endif()
+# endif()
 
 
 

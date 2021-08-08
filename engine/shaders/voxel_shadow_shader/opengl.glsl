@@ -28,7 +28,8 @@ void main()
 }
 #type fragment
 #version 330 core
-layout(location = 0) out vec4 out_color;
+layout(location = 0) out vec4 out_direct;
+layout(location = 1) out vec4 out_ambient;
 
 
 uniform vec3 u_texture_size;
@@ -43,8 +44,10 @@ uniform vec2 u_window_size;
 uniform sampler2D u_albedo;
 uniform sampler2D u_normal;
 uniform sampler2D u_position;
+uniform sampler2D u_buffer;
+uniform sampler2D u_shadow;
 uniform sampler2D u_blue_noise;
-uniform int u_show_shadow_caster;
+uniform vec2 u_blue_noise_size;
 uniform int u_frame_number;
 
 struct Light{
@@ -74,8 +77,9 @@ struct Ray{
 struct RayHit{
     bool hit;
     float distance;
+    vec3 normal;
 };
-RayHit GetOctreeHit(in uint value, in RayHit ray_hit,in Ray ray,in vec3 c,in vec3 b_size,in vec3 t_size, in float max_length){
+RayHit GetOctreeHit(in uint value, in RayHit ray_hit,in Ray ray,in vec3 c,in vec3 b_size,in vec3 t_size, in float max_length, in vec3 in_normal){
   ray.origin = ray.origin + ray.direction*ray_hit.distance;
 
   vec3 voxel_size = (b_size/t_size)/2.0f;
@@ -103,25 +107,28 @@ RayHit GetOctreeHit(in uint value, in RayHit ray_hit,in Ray ray,in vec3 c,in vec
     
   vec3 tDelta = abs(voxel_size/ray.direction);
   vec4 color = vec4(0,0,0,1);
+  ray_hit.normal = in_normal;
     while(true){
         if(ray_hit.distance > max_length){
             break;
         }
         uint v = value&(uint(1)<<int(coords.z*4+coords.y*2 + coords.x));
         if( v != uint(0)){
-            ray_hit.hit = true;
-            break;
+                ray_hit.hit = true;
+                break;
 
         }
         if(tMaxX < tMaxY) {
             if(tMaxX < tMaxZ) {
                 coords.x += steps.x;
                 ray_hit.distance = tMaxX;
+                ray_hit.normal = vec3(-steps.x,0,0);
                 if(abs(coords.x - outOfX)<0.2) break;
                 tMaxX= tMaxX + tDelta.x;
             } else {
                 coords.z += steps.z;
                 ray_hit.distance = tMaxZ;
+                ray_hit.normal = vec3(0,0,-steps.z);
                 if(abs(coords.z - outOfZ)<0.2) break;
                 tMaxZ= tMaxZ + tDelta.z;
             }
@@ -129,11 +136,13 @@ RayHit GetOctreeHit(in uint value, in RayHit ray_hit,in Ray ray,in vec3 c,in vec
             if(tMaxY < tMaxZ) {
                 coords.y += steps.y;
                 ray_hit.distance = tMaxY;
+                ray_hit.normal = vec3(0,-steps.y,0);
                 if(abs(coords.y - outOfY)<0.2) break;
                 tMaxY= tMaxY + tDelta.y;
             } else {
                 coords.z += steps.z;
                 ray_hit.distance = tMaxZ;
+                ray_hit.normal = vec3(0,0,-steps.z);
                 if(abs(coords.z - outOfZ)<0.2) break;
                 tMaxZ= tMaxZ + tDelta.z;
             }
@@ -189,14 +198,15 @@ RayHit algo(in Ray ray,  in vec3 b_size, in vec3 t_size, in float max_length){
 
 
 
-
+    ray_hit.normal = vec3(0,0,0);
     while(true){
         if(ray_hit.distance > max_length){
             break;
         }
         uint voxel = GetVoxel(coords);
         if( voxel != uint(0)){
-            RayHit hit = GetOctreeHit(voxel,ray_hit, ray,coords, b_size, t_size, max_length);
+            RayHit hit = GetOctreeHit(voxel,ray_hit, ray,coords, b_size, t_size, max_length,ray_hit.normal);
+
             if(hit.hit)
               return hit;
         }
@@ -204,11 +214,13 @@ RayHit algo(in Ray ray,  in vec3 b_size, in vec3 t_size, in float max_length){
             if(tMaxX < tMaxZ) {
                 coords.x += steps.x;
                 ray_hit.distance = tMaxX;
+                ray_hit.normal = vec3(-steps.x,0,0);
                 if(abs(coords.x - outOfX)<0.2) break;
                 tMaxX= tMaxX + tDelta.x;
             } else {
                 coords.z += steps.z;
                 ray_hit.distance = tMaxZ;
+                ray_hit.normal = vec3(0,0,-steps.z);
                 if(abs(coords.z - outOfZ)<0.2) break;
                 tMaxZ= tMaxZ + tDelta.z;
             }
@@ -216,11 +228,13 @@ RayHit algo(in Ray ray,  in vec3 b_size, in vec3 t_size, in float max_length){
             if(tMaxY < tMaxZ) {
                 coords.y += steps.y;
                 ray_hit.distance = tMaxY;
+                ray_hit.normal = vec3(0,-steps.y,0);
                 if(abs(coords.y - outOfY)<0.2) break;
                 tMaxY= tMaxY + tDelta.y;
             } else {
                 coords.z += steps.z;
                 ray_hit.distance = tMaxZ;
+                ray_hit.normal = vec3(0,0,-steps.z);
                 if(abs(coords.z - outOfZ)<0.2) break;
                 tMaxZ= tMaxZ + tDelta.z;
             }
@@ -231,50 +245,91 @@ RayHit algo(in Ray ray,  in vec3 b_size, in vec3 t_size, in float max_length){
 
 }
 
-
+float GOLDEN_RATIO = 1.61803398875;
+float G_2D = 1.32471795724;
+float G_3D =1.220744084605; 
 void main()
 {
-    vec3 position = texture(u_position,v_tex_coords).xyz;
-    vec3 normal = texture(u_normal,v_tex_coords).xyz;
-    vec3 albedo = texture(u_albedo,v_tex_coords).xyz;
-    vec3 blue = texture(u_blue_noise,v_tex_coords).xyz;
-    out_color = vec4(blue,1);
-    return;
+  vec4 albedo = texture(u_albedo,v_tex_coords);
+  if(albedo.a<0.5)discard;
+  vec3 position = texture(u_position,v_tex_coords).xyz;
+  vec3 normal = (texture(u_normal,v_tex_coords).xyz - 0.5)*2;
+  vec4 buff= texture(u_buffer,v_tex_coords);
+  
 
-    Ray ray;
-    ray.origin = u_origin;
-    ray.direction = normalize(position - u_origin);
 
-    /* vec3 position = u_origin + dist * ray.direction; */ 
-    //ambient occlusion
+  /* vec3 position = u_origin + dist * ray.direction; */ 
+  //ambient occlusion
 
-    if(u_show_shadow_caster == 1){
-      RayHit hit = algo(ray,u_box_size,u_texture_size, 100);
-      if(hit.hit){
-        out_color = vec4(0.25,0.75, 0.25,1);
-        return;
+
+
+
+  //shadows
+
+  vec3 direct = vec3(0);
+
+  vec3 blue = texture(u_blue_noise,gl_FragCoord.xy/u_blue_noise_size).xyz;
+  int num_passes = 500;
+  float phi = 3.1415*(3-sqrt(5));
+  int model_shadow = int(buff.r*256); 
+  for(int i=0;i<u_num_lights;++i){
+    for(int j=0;j<num_passes;++j){
+      /* if(((1<<i)& model_shadow) != 0) { */
+        /* continue; */
+      /* } */
+
+      vec3 o;
+      o.y = 1 - (float(j)/float(num_passes-1))*2;
+      float radius = sqrt(1 - o.y*o.y);
+      float theta = phi*i;
+      o.x = cos(theta)*radius;
+      o.z = sin(theta)*radius;
+      vec3 noise = o;
+
+      Ray ray;
+      ray.origin = position;
+      vec3 lp = u_lights[i].position + noise*0.5;
+
+      vec3 dir = lp - ray.origin;
+      ray.direction = normalize(dir);
+      ray.origin +=ray.direction*0.001;
+      RayHit hit = algo(ray,u_box_size,u_texture_size, length(dir));
+      if(hit.hit==false){
+        direct += u_lights[i].color/float(num_passes);
       }
     }
+  }
+
+  vec3 ambient = vec3(0);
 
 
+  for(int i=0;i<num_passes;i++)
+  {
 
-    //shadows
-    vec3 light = vec3(0);
-    for(int i=0;i<u_num_lights;++i){
-        ray.origin = position+0.1*normal;
-        vec3 dir = u_lights[i].position - ray.origin;
-        if(length(dir)>u_lights[i].long_range){
-          continue;
-        }
-        ray.direction = normalize(dir);
-        float diff = max(dot(ray.direction, normal),0.0);
-        if(diff<0.01){
-          continue;
-        }
-        RayHit hit = algo(ray,u_box_size,u_texture_size, length(dir));
-        if(hit.hit==false){
-          light = u_lights[i].color;
-        }
+    /* vec3 noise = mod(blue + GOLDEN_RATIO*i,1.0); */
+    /* noise.gb = noise.gb*2 - 1; */
+
+    vec3 o;
+    o.y = 1 - (float(i)/float(num_passes-1));
+    float radius = sqrt(1 - o.y*o.y);
+    float theta = phi*i;
+    o.x = cos(theta)*radius;
+    o.z = sin(theta)*radius;
+    vec3 noise = o;
+    vec3 n = normal;
+    vec3 r1 = normalize(cross(normal,normal+vec3(0.1,0,0)));
+    vec3 r2 = normalize(cross(normal,r1));
+    vec3 dir = n*noise.r + r1 * noise.g + r2*noise.b;
+
+
+    Ray ray;
+    ray.origin = position+0.01*normal;
+    ray.direction = normalize(dir);
+    RayHit hit = algo(ray,u_box_size,u_texture_size, 10);
+    if(hit.hit == false){
+      ambient += vec3(1.0/float(num_passes));
     }
-    out_color = vec4(albedo*(0.25 + 0.75*light),1);//*color;
+  }
+  out_direct = vec4(direct,1);
+  out_ambient = vec4(ambient,1);
 }

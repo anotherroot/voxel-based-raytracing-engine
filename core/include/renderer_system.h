@@ -22,14 +22,19 @@ public:
 private:
   int frame_number_{0};
   void SetShowShadowCaster(bool value); 
-  arc::FrameBuffer frame_buffer_;
+  arc::FrameBuffer frame_buffer_, shadow_fb_, single_fb_[2];
   arc::VoxelRenderer renderer_;
   arc::OverlayRenderer overlay_renderer_;
-  arc::Shader shadow_shader_, voxel_shader_, texture_shader_;
+  arc::Shader shadow_shader_, voxel_shader_, gauss_shader_, combine_shader_, blurr_shader_;
   arc::ShadowTexture shadow_texture_;
   arc::Texture blue_noise_tex_;
   CameraController camera_;
   bool setup_{false};
   bool show_shadow_caster_{false};
+
+
+
+
+  friend class Game;
 };
 #endif

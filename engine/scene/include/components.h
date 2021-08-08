@@ -21,7 +21,6 @@ struct TagComponent {
 };
 struct TransformComponent {
   glm::mat4 transform;
-  bool changed{true};
   TransformComponent() = default;
   TransformComponent(const TransformComponent &t) = default;
   TransformComponent(const glm::mat4 &t) : transform(t) {}
@@ -30,6 +29,7 @@ struct TransformComponent {
 class VoxelModel;
 struct ModelComponent {
   VoxelModel *model;
+  bool draw{true}, erase{false};
   ModelComponent() = default;
   ModelComponent(const ModelComponent &m) = default;
   ModelComponent(VoxelModel *m):model(m){

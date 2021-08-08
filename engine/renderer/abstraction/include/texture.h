@@ -9,9 +9,11 @@ namespace arc {
 
 class Texture {
 public:
-  void Setup3D(int width, int height, int depth, void *data,
+  void Setup2D(const std::string& file_name,
              const TexConf &config);
   void Setup2D(int width, int height, void *data,
+             const TexConf &config);
+  void Setup3D(int width, int height, int depth, void *data,
              const TexConf &config);
   void Dispose();
   ~Texture() { Dispose(); }
