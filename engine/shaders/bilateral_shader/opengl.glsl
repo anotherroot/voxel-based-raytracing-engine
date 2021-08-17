@@ -28,18 +28,15 @@ in vec2 v_tex_coords;
 
 uniform vec2 u_window_size;
 uniform sampler2D u_texture;
+uniform float u_q;
 
 const float gauss[25] = {
-  1.0/256.0, 4.0/256.0,   6.0/256.0,  4.0/256.0,    1.0/256.0,
-  4.0/256.0, 16.0/256.0,  24.0/256.0, 16.0/256.0,   4.0/256.0,
-  6.0/256.0, 24.0/256.0,  36.0/256.0, 24.0/256.0,   6.0/256.0,
-  4.0/256.0, 16.0/256.0,  24.0/256.0, 16.0/256.0,   4.0/256.0,
-  1.0/256.0, 4.0/256.0,   6.0/256.0,  4.0/256.0,    1.0/256.0};
+  1.0, 4.0,   6.0,  4.0,    1.0,
+  4.0, 16.0,  24.0, 16.0,   4.0,
+  6.0, 24.0,  36.0, 24.0,   6.0,
+  4.0, 16.0,  24.0, 16.0,   4.0,
+  1.0, 4.0,   6.0,  4.0,    1.0};
  
-const float gauss3x3[9] = {
-  1.0/16.0, 2.0/16.0,   1.0/16.0,
-  2.0/16.0, 4.0/16.0,   2.0/16.0,
-  1.0/16.0, 2.0/16.0,   1.0/16.0};
 
 float dx = 1.0/u_window_size.x;
 float dy = 1.0/u_window_size.y;
@@ -51,18 +48,17 @@ vec2 offsets[25]= {
   vec2(-2*dx,+1*dy), vec2(-1*dx,+1*dy), vec2(+0*dx,+1*dy), vec2(+1*dx,+1*dy), vec2(+2*dx,+1*dy),
   vec2(-2*dx,+2*dy), vec2(-1*dx,+2*dy), vec2(+0*dx,+2*dy), vec2(+1*dx,+2*dy), vec2(+2*dx,+2*dy)};
 
-vec2 offsets3x3[9]= { 
- vec2(-1*dx,-1*dy), vec2(+0*dx,-1*dy), vec2(+1*dx,-1*dy),
- vec2(-1*dx,0*dy), vec2(+0*dx,0*dy), vec2(+1*dx,0*dy),
- vec2(-1*dx,+1*dy), vec2(+0*dx,+1*dy), vec2(+1*dx,+1*dy)};
 void main()
 {
   vec3 ret = vec3(0);
-  /* for(int i=0;i<25;++i){ */
-  /*   ret+=texture(u_texture, v_tex_coords+offsets[i]).xyz*gauss[i]; */
-  /* } */
-  for(int i=0;i<9;++i){
-    ret+=texture(u_texture, v_tex_coords+offsets3x3[i]).xyz*gauss3x3[i];
+  float val = texture(u_texture,v_tex_coords).x;
+  float w = 0;
+  for(int i=0;i<25;++i){
+    vec3 v =texture(u_texture, v_tex_coords+offsets[i]).xyz; 
+    if(abs(v.x-val)<=u_q){
+      ret+=v*gauss[i];
+      w+=gauss[i];
+    }
   }
-  out_color = vec4(ret,1);
+  out_color = vec4(ret/w,1);
 }

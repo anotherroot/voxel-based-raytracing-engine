@@ -252,40 +252,37 @@ void main()
         out_position = vec4(pos,1);//if you dont put vec4 here it gives you really weird results
         gl_FragDepth = proj.z/proj.w;
 
-        /* float diffuse = 0.75 + 0.25 * clamp(dot(normalize(vec3(2,3,1)),normal.xyz),-1,1); */
-        //diffuse = 1;
-        /* vec4 color = vec4(u_materials[hit.material].color*diffuse,1); */
-        uint shadow = uint(0);
+        /* /1* float diffuse = 0.75 + 0.25 * clamp(dot(normalize(vec3(2,3,1)),normal.xyz),-1,1); *1/ */
+        /* //diffuse = 1; */
+        /* /1* vec4 color = vec4(u_materials[hit.material].color*diffuse,1); *1/ */
+        /* uint shadow = uint(0); */
+        /* if(int(u_texture_size.x) != 1){ */
+        /* for(int i=0;i<u_num_lights;++i){ */
+        /*   vec3 p = vec3(inverse(u_transform)*vec4(u_lights[i].position,1)); */
+        /*   p*= u_box_size; */ 
+        /*   ray.origin = ray.origin + hit.distance*ray.direction + hit.normal.xyz*0.001; */
+        /*   vec3 dir = p - ray.origin; */ 
+        /*   ray.direction =normalize(dir); */ 
+        /*   if(length(dir)>u_lights[i].long_range){ */
+        /*     shadow|=uint(1)<<i; */
+        /*     continue; */
+        /*   } */
+
+        /*   float diff = max(dot(ray.direction, hit.normal),0.0); */
+        /*   if(diff<0.001){ */
+        /*     shadow|=uint(1)<<i; */
+        /*     continue; */
+        /*   } */
+
+        /*   RayHit shadow_hit = algo(ray,u_box_position, u_box_size, u_texture_size, in_normal, length(dir)); */   
+        /*   if(shadow_hit.hit){ */
+        /*     shadow|=uint(1)<<i; */
+        /*   } */
+        /* } */
+        /* } */
+        /* out_buffer = vec4(float(shadow)/256,0,0,1); */
+
         vec4 color = vec4(u_materials[hit.material].color,1);
-        if(int(u_texture_size.x) != 1){
-        for(int i=0;i<u_num_lights;++i){
-          vec3 p = vec3(inverse(u_transform)*vec4(u_lights[i].position,1));
-          p*= u_box_size; 
-
-          ray.origin = ray.origin + hit.distance*ray.direction + hit.normal.xyz*0.001;
-          vec3 dir = p - ray.origin; 
-          ray.direction =normalize(dir); 
-
-          if(length(dir)>u_lights[i].long_range){
-            shadow|=uint(1)<<i;
-            continue;
-          }
-           
-          float diff = max(dot(ray.direction, hit.normal),0.0);
-          if(diff<0.001){
-            shadow|=uint(1)<<i;
-            continue;
-          }
-          
-          RayHit shadow_hit = algo(ray,u_box_position, u_box_size, u_texture_size, in_normal, length(dir));   
-          if(shadow_hit.hit){
-            shadow|=uint(1)<<i;
-          }
-        }
-        }
-        out_buffer = vec4(float(shadow)/256,0,0,1);
-
-        //color = normal;
         out_color=color;
 
     }

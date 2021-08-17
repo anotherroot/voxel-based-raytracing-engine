@@ -21,11 +21,14 @@ public:
 
 private:
   int frame_number_{0};
+  int curr_AO_fb_{0};
+  int target_AO_fb_{0};
+  bool ignore_old_AO_{true};
   void SetShowShadowCaster(bool value); 
-  arc::FrameBuffer frame_buffer_, shadow_fb_, single_fb_[2];
+  arc::FrameBuffer frame_buffer_, shadow_fb_, single_fb_[2], AO_fbs_[10];
   arc::VoxelRenderer renderer_;
   arc::OverlayRenderer overlay_renderer_;
-  arc::Shader shadow_shader_, voxel_shader_, gauss_shader_, combine_shader_, blurr_shader_;
+  arc::Shader shadow_shader_, voxel_shader_, gauss_shader_, combine_shader_, blurr_shader_, copy_shader_, combine_AO_shader_, bilateral_shader_, fsaa_shader_;
   arc::ShadowTexture shadow_texture_;
   arc::Texture blue_noise_tex_;
   CameraController camera_;
@@ -33,8 +36,26 @@ private:
   bool show_shadow_caster_{false};
 
 
+  struct Options{
+    // ambinet oclusion
+    int AO_num_rays{3};
+    float AO_bilateral_tolerance{0.1};
+    bool AO_with_bilateral_{true};
+    float AO_ray_dist{0.5};
+    int max_temporal{10};
+    // ambient light
+    glm::vec3 ambient_color{1,1,1};
+
+    float diffuse_scalar{0.5};
+    float ambient_scalar{0.5};
+    float specular_scalar{0.5};
+  
+  };
+  Options opt_;
 
 
-  friend class Game;
+
+  friend class Game; 
+  friend class CameraController;
 };
 #endif

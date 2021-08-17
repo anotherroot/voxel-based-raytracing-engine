@@ -10,8 +10,15 @@ public:
   CameraController();
   void Update(float delta_time);
   const arc::PerspectiveCamera &camera() const { return camera_; }
-  
+  bool CheckIfMoved(){
+    if(moved_){
+      moved_=false;
+      return true;
+    }
+    return false;
+  } 
 private:
+  bool moved_{false};
   bool fp_controller_;
   float fov_, yaw_, pitch_;
   glm::vec3 position_;

@@ -15,12 +15,12 @@ void Game::Init() {
 
   {
     guy_model_.Setup("walterwhite.vox");
-    for (int i = 0; i < 5; ++i) {
-      for (int j = 0; j < 5; ++j) {
+    for (int i = 0; i < 1; ++i) {
+      for (int j = 0; j < 1; ++j) {
         auto guy = scene_.CreateEntity("Guy" + std::to_string(i));
         guy.Add<arc::ModelComponent>(&guy_model_);
         arc::Rotate(guy, -90, {1, 0, 0});
-        arc::Translate(guy, {i*3 -6.5, j*3 -7.6, 0});
+        arc::Translate(guy, {i*3 , j*3 , 0});
         walters_.push_back(guy);
       }
     }
@@ -37,7 +37,7 @@ void Game::Init() {
     auto &trans = light_.Get<arc::TransformComponent>().transform;
     light_.Add<arc::BoxComponent>(glm::vec3(1, 0, 0), glm::vec3(0.3));
     arc::Translate(light_, {-5, 10, -2});
-    light_.Add<arc::LightComponent>(100.0f, 0.0f, glm::vec3(1, 1, 1));
+    light_.Add<arc::LightComponent>(100.0f, 0.0f, glm::vec3(1, 1, 1),0.5f);
   }
 
   renderer_system_.Setup(scene_);
@@ -60,8 +60,8 @@ void Game::Update() {
   }
 
   {
-    /* float cos = glm::cos(arc::Engine::running_time() ); */
-    /* float sin = glm::sin(arc::Engine::running_time() ); */
+    float cos = glm::cos(arc::Engine::running_time() );
+    float sin = glm::sin(arc::Engine::running_time() );
     /* arc::SetPosition( */
     /*     light_, glm::vec3(cos*5, 8,sin*5)); */
   }
@@ -112,17 +112,34 @@ void Game::ImGuiRender() {
                ImVec2(arc::Engine::window().width() / 2,
                       arc::Engine::window().height() / 2),
                ImVec2(0, 1), ImVec2(1, 0));
-  ImGui::Text("ambient gauss");
-  ImGui::Image(reinterpret_cast<ImTextureID>(
-                   renderer_system_.single_fb_[1].GetAttachment(0)),
-               ImVec2(arc::Engine::window().width() / 2,
-                      arc::Engine::window().height() / 2),
-               ImVec2(0, 1), ImVec2(1, 0));
-  ImGui::Text("ambient gauss^2");
+
+  ImGui::Text("ambient combined");
   ImGui::Image(reinterpret_cast<ImTextureID>(
                    renderer_system_.single_fb_[0].GetAttachment(0)),
                ImVec2(arc::Engine::window().width() / 2,
                       arc::Engine::window().height() / 2),
                ImVec2(0, 1), ImVec2(1, 0));
+
+  ImGui::Text("ambient combined gauss");
+  ImGui::Image(reinterpret_cast<ImTextureID>(
+                   renderer_system_.single_fb_[1].GetAttachment(0)),
+               ImVec2(arc::Engine::window().width() / 2,
+                      arc::Engine::window().height() / 2),
+               ImVec2(0, 1), ImVec2(1, 0));
+  ImGui::End();
+
+  ImGui::Begin("Options");
+  ImGui::InputFloat("Bilateral tolerance",&renderer_system_.opt_.AO_bilateral_tolerance);
+  ImGui::InputInt("Num Rays",&renderer_system_.opt_.AO_num_rays);
+  if(ImGui::Selectable("With Bilateral",&renderer_system_.opt_.AO_with_bilateral_)){
+    renderer_system_.opt_.AO_with_bilateral_ = !renderer_system_.opt_.AO_with_bilateral_;
+  }
+  ImGui::InputFloat("AO Ray dist",&renderer_system_.opt_.AO_ray_dist);
+  ImGui::InputInt("AO max temporal",&renderer_system_.opt_.max_temporal);
+  ImGui::Text("Scene Light values");
+  ImGui::ColorEdit3("color",(float*)&renderer_system_.opt_.ambient_color);
+  ImGui::InputFloat("diffuse scalar", &renderer_system_.opt_.diffuse_scalar);
+  ImGui::InputFloat("ambient scalar", &renderer_system_.opt_.ambient_scalar);
+  ImGui::InputFloat("specular scalar", &renderer_system_.opt_.specular_scalar);
   ImGui::End();
 }

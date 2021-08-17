@@ -16,6 +16,7 @@ CameraController::CameraController()
 void CameraController::Update(float delta_time) {
   position_ += direction_ * delta_time * 5.0f;
   camera_.SetView(position_, look_at_);
+  moved_ |= glm::length(direction_)>0.1;
 }
 bool CameraController::OnKeyDown(int key, bool repeat) {
   CheckKeys();
@@ -84,6 +85,7 @@ bool CameraController::OnMove(double x_pos, double y_pos) {
   right_ = glm::normalize(glm::cross(look_at_, up_vector_));
   camera_.SetView(position_, look_at_, {0, 1, 0});
   prev_mouse_position_ = mouse_position;
+  moved_ = true;
   return false;
 }
 

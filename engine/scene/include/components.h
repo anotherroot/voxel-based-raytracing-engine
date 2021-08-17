@@ -38,11 +38,11 @@ struct ModelComponent {
 };
 
 struct LightComponent{
-  float long_range, short_range;
+  float long_range, short_range, radius;
   glm::vec3 color;
   LightComponent() = default;
   LightComponent(const LightComponent &m) = default;
-  LightComponent(float lr, float sr, const glm::vec3& col):long_range(lr), short_range(sr), color(col){
+  LightComponent(float lr, float sr, const glm::vec3& col, float rad):long_range(lr), short_range(sr), color(col), radius(rad){
   }
 
 };

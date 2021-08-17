@@ -44,20 +44,29 @@ uniform vec2 u_window_size;
 uniform sampler2D u_albedo;
 uniform sampler2D u_normal;
 uniform sampler2D u_position;
-uniform sampler2D u_buffer;
 uniform sampler2D u_shadow;
 uniform sampler2D u_blue_noise;
 uniform vec2 u_blue_noise_size;
 uniform int u_frame_number;
+uniform int u_num_rays;
 
+uniform int u_ambient_state;// 0- only use new ambient, 1- add to ambient, 2- subtrack from ambient and add to it
+/* uniform int u_ambient_count;//how many samples are stored */
 struct Light{
   vec3 position;
   float long_range;
   float short_range;
+  float radius;
   vec3 color;
 };
 uniform int u_num_lights;
 uniform Light u_lights[32];
+uniform vec3 u_ambient_color;
+uniform float u_diffuse_scalar;
+uniform float u_ambient_scalar;
+uniform float u_specular_scalar;
+
+uniform float u_AO_ray_dist;
 
 in vec3 v_position;
 in vec3 v_origin;
@@ -246,15 +255,14 @@ RayHit algo(in Ray ray,  in vec3 b_size, in vec3 t_size, in float max_length){
 }
 
 float GOLDEN_RATIO = 1.61803398875;
-float G_2D = 1.32471795724;
-float G_3D =1.220744084605; 
+float POPO1 = 1.32471795724;
+float POPO2 =1.220744084605; 
 void main()
 {
   vec4 albedo = texture(u_albedo,v_tex_coords);
   if(albedo.a<0.5)discard;
   vec3 position = texture(u_position,v_tex_coords).xyz;
   vec3 normal = (texture(u_normal,v_tex_coords).xyz - 0.5)*2;
-  vec4 buff= texture(u_buffer,v_tex_coords);
   
 
 
@@ -263,59 +271,55 @@ void main()
 
 
 
+  vec3 blue = texture(u_blue_noise,gl_FragCoord.xy/u_blue_noise_size).xyz;
 
   //shadows
+  float diffuse_scalar = u_diffuse_scalar; 
+  float ambient_scalar = u_ambient_scalar; 
+  float specular_scalar = u_specular_scalar; 
+  vec3 diffuse = vec3(0);
+  vec3 ambient = vec3(0);
+  vec3 specular = vec3(0);
 
-  vec3 direct = vec3(0);
-
-  vec3 blue = texture(u_blue_noise,gl_FragCoord.xy/u_blue_noise_size).xyz;
-  int num_passes = 500;
-  float phi = 3.1415*(3-sqrt(5));
-  int model_shadow = int(buff.r*256); 
   for(int i=0;i<u_num_lights;++i){
-    for(int j=0;j<num_passes;++j){
-      /* if(((1<<i)& model_shadow) != 0) { */
-        /* continue; */
-      /* } */
-
-      vec3 o;
-      o.y = 1 - (float(j)/float(num_passes-1))*2;
-      float radius = sqrt(1 - o.y*o.y);
-      float theta = phi*i;
-      o.x = cos(theta)*radius;
-      o.z = sin(theta)*radius;
-      vec3 noise = o;
+      
+      int j = (u_frame_number*u_num_lights+i);
+      vec3 popo = vec3(GOLDEN_RATIO*(j%97), POPO1*(j%137), POPO2*(j%67));
+      vec3 noise = mod(blue+popo,1.0)*2 -1;  
 
       Ray ray;
       ray.origin = position;
       vec3 lp = u_lights[i].position + noise*0.5;
-
       vec3 dir = lp - ray.origin;
       ray.direction = normalize(dir);
-      ray.origin +=ray.direction*0.001;
-      RayHit hit = algo(ray,u_box_size,u_texture_size, length(dir));
-      if(hit.hit==false){
-        direct += u_lights[i].color/float(num_passes);
+      float diff = dot(ray.direction, normal);
+      if(diff>0.0){
+        ray.origin +=ray.direction*0.001;
+        RayHit hit = algo(ray,u_box_size,u_texture_size, length(dir));
+        if(hit.hit==false){
+          diffuse += u_lights[i].color*diffuse_scalar*diff;
+        }
       }
-    }
+
+      //specular
+      /* ray.origin = position; */
+      vec3 view_dir = normalize(u_origin-position);
+      vec3 reflect_dir = reflect(-normalize(dir),normal);
+      float spec = pow(max(dot(view_dir,reflect_dir),0.0),32);
+      specular +=spec*u_lights[i].color*specular_scalar;
+        
   }
 
-  vec3 ambient = vec3(0);
-
-
-  for(int i=0;i<num_passes;i++)
+  int AO_num_rays = u_num_rays;
+  float AO_ray_dist = u_AO_ray_dist;
+  for(int i=0;i<AO_num_rays;i++)
   {
+    int j = (u_frame_number*AO_num_rays+i);
+    vec3 popo = vec3(GOLDEN_RATIO*(j%97), POPO1*(j%137), POPO2*(j%67));
+    vec3 noise = mod(blue + popo,1.0);
+    noise.gb = noise.gb*2 - 1;
 
-    /* vec3 noise = mod(blue + GOLDEN_RATIO*i,1.0); */
-    /* noise.gb = noise.gb*2 - 1; */
 
-    vec3 o;
-    o.y = 1 - (float(i)/float(num_passes-1));
-    float radius = sqrt(1 - o.y*o.y);
-    float theta = phi*i;
-    o.x = cos(theta)*radius;
-    o.z = sin(theta)*radius;
-    vec3 noise = o;
     vec3 n = normal;
     vec3 r1 = normalize(cross(normal,normal+vec3(0.1,0,0)));
     vec3 r2 = normalize(cross(normal,r1));
@@ -325,11 +329,13 @@ void main()
     Ray ray;
     ray.origin = position+0.01*normal;
     ray.direction = normalize(dir);
-    RayHit hit = algo(ray,u_box_size,u_texture_size, 10);
+    RayHit hit = algo(ray,u_box_size,u_texture_size, AO_ray_dist);
     if(hit.hit == false){
-      ambient += vec3(1.0/float(num_passes));
+      ambient += (u_ambient_color*ambient_scalar)/float(AO_num_rays);
     }
   }
-  out_direct = vec4(direct,1);
-  out_ambient = vec4(ambient,1);
+
+
+  out_ambient = vec4((diffuse+ambient+specular)/2.0,1);
+
 }
