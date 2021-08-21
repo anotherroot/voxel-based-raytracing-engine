@@ -291,22 +291,26 @@ void main()
       ray.origin = position;
       vec3 lp = u_lights[i].position + noise*0.5;
       vec3 dir = lp - ray.origin;
-      ray.direction = normalize(dir);
-      float diff = dot(ray.direction, normal);
-      if(diff>0.0){
-        ray.origin +=ray.direction*0.001;
-        RayHit hit = algo(ray,u_box_size,u_texture_size, length(dir));
-        if(hit.hit==false){
-          diffuse += u_lights[i].color*diffuse_scalar*diff;
+        float len = length(dir);
+      if(len<=u_lights[i].long_range){
+        float len_scalar = min(1.0,max(0.0,sign(u_lights[i].short_range - len)) + (u_lights[i].long_range - len)/(u_lights[i].long_range-u_lights[i].short_range));
+        ray.direction = normalize(dir);
+        float diff = dot(ray.direction, normal);
+        if(diff>0.0){
+          ray.origin +=ray.direction*0.001;
+          RayHit hit = algo(ray,u_box_size,u_texture_size, len);
+          if(hit.hit==false){
+            diffuse += u_lights[i].color*diffuse_scalar*diff*len_scalar;
+          }
         }
       }
 
-      //specular
-      /* ray.origin = position; */
-      vec3 view_dir = normalize(u_origin-position);
-      vec3 reflect_dir = reflect(-normalize(dir),normal);
-      float spec = pow(max(dot(view_dir,reflect_dir),0.0),32);
-      specular +=spec*u_lights[i].color*specular_scalar;
+      /* //specular */
+      /* /1* ray.origin = position; *1/ */
+      /* vec3 view_dir = normalize(u_origin-position); */
+      /* vec3 reflect_dir = reflect(-normalize(dir),normal); */
+      /* float spec = pow(max(dot(view_dir,reflect_dir),0.0),32); */
+      /* specular +=spec*u_lights[i].color*specular_scalar; */
         
   }
 
@@ -315,6 +319,7 @@ void main()
   for(int i=0;i<AO_num_rays;i++)
   {
     int j = (u_frame_number*AO_num_rays+i);
+    /* int j = i; */
     vec3 popo = vec3(GOLDEN_RATIO*(j%97), POPO1*(j%137), POPO2*(j%67));
     vec3 noise = mod(blue + popo,1.0);
     noise.gb = noise.gb*2 - 1;

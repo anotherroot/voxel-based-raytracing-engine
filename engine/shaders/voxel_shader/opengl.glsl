@@ -56,6 +56,7 @@ uniform mat4 u_transform;
 uniform mat4 u_view_projection;
 
 uniform sampler3D u_texture;
+
 struct Material{
     vec3 color;
 };
@@ -68,7 +69,6 @@ struct Light{
   float short_range;
   vec3 color;
 };
-
 uniform int u_num_lights;
 uniform Light u_lights[32];
 

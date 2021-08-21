@@ -26,9 +26,9 @@ layout(location = 0) out vec4 out_color;
 
 in vec2 v_tex_coords;
 
-uniform sampler2D u_AO[10];
-uniform int u_ignore_old;
+uniform sampler2D u_old[10];
 uniform int u_num;
+
 
 
 
@@ -36,10 +36,9 @@ void main()
 {
   vec3 color = vec3(0);
   int n = u_num;
-  /* out_color= vec4(vec3(n/10.0),1); */
-  /* return; */
+
   for(int i=0;i<n;++i){
-    color+=texture(u_AO[i],v_tex_coords).xyz/float(n); 
+    color+=texture(u_old[i],v_tex_coords).xyz/float(n); 
   }
   out_color = vec4(color,1);
 }

@@ -45,6 +45,7 @@ void VoxelModel::Setup(const std::string &file_path) {
       size_t x_size = model->size_x;
       size_t y_size = model->size_y;
       size_t z_size = model->size_z;
+      raw_sizes_[inst] = {x_size, y_size, z_size};
       offsets_[inst] = (*((glm::mat4 *)&scene->instances[inst].transform))[3];
       for (int i = 7; i >= 2; --i) {
         if (x_size & (1 << i)) {
@@ -79,7 +80,6 @@ void VoxelModel::Setup(const std::string &file_path) {
       offsets_[inst] -=
           glm::vec3(model->size_x, model->size_y, model->size_z) / 2.0f;
       sizes_[inst] = {x_size, y_size, z_size};
-      raw_sizes_[inst] = sizes_[inst];
       offsets_[inst] /= sizes_[inst];
       logi("fixed x: {0}", x_size);
       logi("fixed y: {0}", y_size);

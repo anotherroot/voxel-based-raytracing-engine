@@ -16,6 +16,8 @@ void RendererAPI::Setup() {
   glEnable(GL_CULL_FACE);
   /* glEnable(GL_BACK); */
   glEnable(GL_TEXTURE_3D);
+
+  logi("data: {0}", GL_MAX_VERTEX_UNIFORM_COMPONENTS);
 }
 void RendererAPI::Dispose() {
   if (setup_) {

@@ -30,6 +30,7 @@ class VoxelModel;
 struct ModelComponent {
   VoxelModel *model;
   bool draw{true}, erase{false};
+  glm::vec3 voxel_size{0.1,0.1,0.1};
   ModelComponent() = default;
   ModelComponent(const ModelComponent &m) = default;
   ModelComponent(VoxelModel *m):model(m){

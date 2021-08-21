@@ -9,6 +9,9 @@
 #include "shadow_texture.h"
 #include "voxel_renderer.h"
 #include "overlay_renderer.h"
+
+#define MAX_NUM_AOS 100
+
 class RendererSystem : public arc::WindowListener, arc::KeyboardListener {
 public:
   void Setup(arc::Scene &scene);
@@ -20,41 +23,49 @@ public:
   bool OnKeyDown(int key, bool repeat) override;
 
 private:
-  int frame_number_{0};
-  int curr_AO_fb_{0};
-  int target_AO_fb_{0};
-  bool ignore_old_AO_{true};
-  void SetShowShadowCaster(bool value); 
-  arc::FrameBuffer frame_buffer_, shadow_fb_, single_fb_[2], AO_fbs_[10];
-  arc::VoxelRenderer renderer_;
-  arc::OverlayRenderer overlay_renderer_;
-  arc::Shader shadow_shader_, voxel_shader_, gauss_shader_, combine_shader_, blurr_shader_, copy_shader_, combine_AO_shader_, bilateral_shader_, fsaa_shader_;
-  arc::ShadowTexture shadow_texture_;
-  arc::Texture blue_noise_tex_;
-  CameraController camera_;
-  bool setup_{false};
-  bool show_shadow_caster_{false};
 
+  arc::OverlayRenderer overlay_renderer_;
+  arc::Shader tracing_shader_, fsaa_shader_, combine_shader_, soft_shadow_shader_, copy_shader_, temporal_shader_, median_shader_,new_median_shader_;
+  arc::Texture blue_noise_tex_, bayer_mat_tex_;
+  arc::FrameBuffer main_fb_, combine_fb_, soft_shadow_fb_[3], ss_old_fbs_[10], median_fb_[3];
+  CameraController camera_;
+
+  int ss_current_old_{0};
+  int ss_target_old_{0};
 
   struct Options{
     // ambinet oclusion
-    int AO_num_rays{3};
-    float AO_bilateral_tolerance{0.1};
-    bool AO_with_bilateral_{true};
-    float AO_ray_dist{0.5};
-    int max_temporal{10};
+    int AO_num_rays{2};
+    float AO_ray_dist{0.3};
     // ambient light
     glm::vec3 ambient_color{1,1,1};
 
+    int change_ambient_based_on_color{1};
     float diffuse_scalar{0.5};
     float ambient_scalar{0.5};
     float specular_scalar{0.5};
-  
+
+    //shadow
+    bool use_soft_shadow{true};
+    int ss_num_passes{2};
+    int ss_filter_radius{15};
+    int ss_cross_type{3};
+    int ss_num_old{10};
+    float ss_pos_th{0.08};
+
+    int median_num_passes{0};
+    int median_radius{2};
+    int new_median_shader{0};
+    int dithering{1}; 
+
+    bool use_fsaa{true};
   };
   Options opt_;
 
 
 
+  int frame_number_{0};
+  bool setup_{false};
   friend class Game; 
   friend class CameraController;
 };
