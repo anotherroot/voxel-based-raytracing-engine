@@ -4,6 +4,7 @@
 #include "glm.hpp"
 #include "perspective_camera.h"
 #include "string"
+#include "structs.h"
 namespace arc {
   
 struct IDComponent {
@@ -26,16 +27,23 @@ struct TransformComponent {
   TransformComponent(const glm::mat4 &t) : transform(t) {}
 
 };
-class VoxelModel;
+class VoxelModels;
 struct ModelComponent {
-  VoxelModel *model;
-  bool draw{true}, erase{false};
-  glm::vec3 voxel_size{0.1,0.1,0.1};
+  
+  glm::vec3 voxel_size{0.1,0.1,0.1}, raw_size, size;
+  int id;
   ModelComponent() = default;
   ModelComponent(const ModelComponent &m) = default;
-  ModelComponent(VoxelModel *m):model(m){
+  ModelComponent(int i, const glm::vec3& vs, const glm::vec3& rs, const glm::vec3& s):id(i), voxel_size(vs), raw_size(rs), size(s){
   }
 
+};
+struct MaterialComponent{
+  Material mat;
+  MaterialComponent() = default;
+  MaterialComponent(const MaterialComponent &m) = default;
+  MaterialComponent(const Material &m):mat(m){
+  }
 };
 
 struct LightComponent{

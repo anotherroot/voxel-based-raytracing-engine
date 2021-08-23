@@ -25,11 +25,13 @@ void RendererSystem::Setup(arc::Scene &scene) {
                      {arc::TexConf::RGBA, arc::TexConf::BYTE,
                       arc::TexConf::NEAREST}, // diffuse
                      {arc::TexConf::RGBA, arc::TexConf::BYTE,
+                      arc::TexConf::NEAREST}, // ambient
+                     {arc::TexConf::RGBA, arc::TexConf::BYTE,
                       arc::TexConf::NEAREST}}, // debug
                     true});
 
     for (int i = 0; i < 3; ++i)
-      soft_shadow_fb_[i].Setup({wwidth,
+      ambient_fb_[i].Setup({wwidth,
                                 wheight,
                                 1,
                                 {{arc::TexConf::RGBA, arc::TexConf::BYTE,
@@ -37,7 +39,7 @@ void RendererSystem::Setup(arc::Scene &scene) {
                                 true});
 
     for (int i = 0; i < 3; ++i)
-      median_fb_[i].Setup({wwidth,
+      diffuse_fb_[i].Setup({wwidth,
                            wheight,
                            1,
                            {{arc::TexConf::RGBA, arc::TexConf::BYTE,
@@ -45,7 +47,7 @@ void RendererSystem::Setup(arc::Scene &scene) {
                            true});
 
     for (int i = 0; i < 10; ++i)
-      ss_old_fbs_[i].Setup({wwidth,
+      old_light_fbs_[i].Setup({wwidth,
                             wheight,
                             1,
                             {{arc::TexConf::RGBA, arc::TexConf::BYTE,
@@ -63,8 +65,10 @@ void RendererSystem::Setup(arc::Scene &scene) {
 
   tracing_shader_.Setup("/home/tilen/Projects/diploma/renderer/"
                         "engine/shaders/tracing_shader");
-  soft_shadow_shader_.Setup("/home/tilen/Projects/diploma/renderer/"
-                            "engine/shaders/soft_shadow_shader");
+  ambient_filter_.Setup("/home/tilen/Projects/diploma/renderer/"
+                            "engine/shaders/ambient_filter");
+  diffuse_filter_.Setup("/home/tilen/Projects/diploma/renderer/"
+                            "engine/shaders/diffuse_filter");
   combine_shader_.Setup("/home/tilen/Projects/diploma/renderer/"
                         "engine/shaders/combine_shader");
   fsaa_shader_.Setup("/home/tilen/Projects/diploma/renderer/"
@@ -73,10 +77,8 @@ void RendererSystem::Setup(arc::Scene &scene) {
                      "engine/shaders/copy_shader");
   temporal_shader_.Setup("/home/tilen/Projects/diploma/renderer/"
                          "engine/shaders/temporal_shader");
-  median_shader_.Setup("/home/tilen/Projects/diploma/renderer/"
-                       "engine/shaders/fake_median_shader");
-  new_median_shader_.Setup("/home/tilen/Projects/diploma/renderer/"
-                       "engine/shaders/median_shader");
+  combine_light_shader_.Setup("/home/tilen/Projects/diploma/renderer/"
+                       "engine/shaders/combine_light_shader");
 
   overlay_renderer_.Init();
   blue_noise_tex_.Setup2D("LDR_RGB1_0.png", {});
@@ -93,7 +95,7 @@ void RendererSystem::Update(arc::Scene &scene) {
   }
   {
     main_fb_.Bind();
-    arc::RendererAPI::SetClearColor({1.0, 1.0, 1.0, 0});
+    arc::RendererAPI::SetClearColor(glm::vec4(opt_.bacground_color,0));
     arc::RendererAPI::Clear();
     overlay_renderer_.Begin(tracing_shader_);
     {
@@ -105,19 +107,18 @@ void RendererSystem::Update(arc::Scene &scene) {
       glm::vec3 pos = glm::inverse(camera_.camera().view())[3];
 
       tracing_shader_.SetInt("u_world_tex", 1);
-      tracing_shader_.SetInt("u_object_tex", 2);
-      tracing_shader_.SetInt("u_blue_noise", 3);
+      tracing_shader_.SetInt("u_blue_noise", 2);
 
       tracing_shader_.SetInt("u_soft_shadows", opt_.use_soft_shadow);
       blue_noise_tex_.Bind(3);
       tracing_shader_.SetFloat2(
           "u_bn_size", {blue_noise_tex_.width(), blue_noise_tex_.height()});
       // settings
-      tracing_shader_.SetInt("u_num_ao_rays", opt_.AO_num_rays);
+      tracing_shader_.SetInt("u_num_ao_rays", opt_.ambient_num_rays);
       tracing_shader_.SetFloat3("u_ambient_color", opt_.ambient_color);
-      tracing_shader_.SetFloat("u_ao_ray_length", opt_.AO_ray_dist);
-      tracing_shader_.SetInt("u_use_temporal", (bool)opt_.ss_num_old);
-      tracing_shader_.SetInt("u_lum", (bool)opt_.change_ambient_based_on_color);
+      tracing_shader_.SetFloat("u_ao_ray_length", opt_.ambient_ray_distance);
+      tracing_shader_.SetInt("u_use_temporal", (bool)opt_.temporal_num);
+      tracing_shader_.SetInt("u_lum", (bool)opt_.ambient_based_on_color);
       // lights
       {
 
@@ -147,29 +148,30 @@ void RendererSystem::Update(arc::Scene &scene) {
         for (auto [entity, transform, model] : objects.each()) {
           std::string obj_str = "u_objects[" + std::to_string(i) + "].";
           tracing_shader_.SetMat4(obj_str + "transform", transform.transform);
-          glm::vec3 t = model.model->raw_size(0)/model.model->size(0);
-          logi("{0}, {1}, {2}", t.x, t.y, t.z);
           tracing_shader_.SetFloat3(obj_str + "tex_size",
-                                    model.model->raw_size(0));
+                                    model.raw_size);
           tracing_shader_.SetFloat3(obj_str + "vox_size", model.voxel_size);
-          tracing_shader_.SetFloat3(obj_str + "s_tex", glm::vec3(0));
-          tracing_shader_.SetFloat3(obj_str + "e_tex",
-                                    model.model->raw_size(0) /
-                                        model.model->size(0));
+          tracing_shader_.SetFloat3(obj_str + "inv_size",
+                                    1.0f/model.size);
+          tracing_shader_.SetInt(obj_str + "tex", i+3);
 
-          if (i == 0) {
-            tracing_shader_.SetFloat3("u_obj_tex_size", model.model->size(0));
-            int j = 0;
-            for (auto &mat : model.model->materials()) {
-              std::string mat_str = "u_materials[" + std::to_string(j) + "].";
-              tracing_shader_.SetFloat3(mat_str + "color", mat.color);
-              j++;
-            }
-          }
-          model.model->texture(0).Bind(2);
+          arc::Texture::Bind(model.id,i+3);
+
           i++;
         }
+
         tracing_shader_.SetInt("u_num_objects", i);
+      } 
+      {
+
+        auto materials =
+            scene.registry()
+                .view<const  arc::MaterialComponent, arc::TagComponent>();
+        for (auto [entity, material, tag] : materials.each()) {
+          tracing_shader_.SetFloat4(tag.tag+".color", material.mat.color);
+        }
+
+      
       }
     }
     overlay_renderer_.End(tracing_shader_);
@@ -177,142 +179,135 @@ void RendererSystem::Update(arc::Scene &scene) {
   }
 
 
-  if (opt_.use_soft_shadow) // soft shadows
+  if (opt_.ambient_filter) // ambient denoise
   {
-    for (int i = 0; i < opt_.ss_num_passes; ++i) {
-      int j = i + 1 == opt_.ss_num_passes ? 2 : i & 1;
-      soft_shadow_fb_[j].Bind();
-      arc::RendererAPI::SetClearColor({1.0, 1.0, 1.0, 0});
+    for (int i = 0; i < opt_.ambient_num_passes; ++i) {
+      int j = i + 1 == opt_.ambient_num_passes ? 2 : i & 1;
+      ambient_fb_[j].Bind();
+      arc::RendererAPI::SetClearColor(glm::vec4(opt_.bacground_color,0));
       arc::RendererAPI::Clear();
-      overlay_renderer_.Begin(soft_shadow_shader_);
+      overlay_renderer_.Begin(ambient_filter_);
       {
-        soft_shadow_shader_.SetFloat2(
+        ambient_filter_.SetFloat2(
             "u_window_size",
             {arc::Engine::window().width(), arc::Engine::window().height()});
-        soft_shadow_shader_.SetFloat("u_pos_th", opt_.ss_pos_th);
-        soft_shadow_shader_.SetInt("u_texture", 1);
+        ambient_filter_.SetFloat("u_pos_th", opt_.ambient_filter_position_treshold);
+        ambient_filter_.SetInt("u_texture", 1);
         if (i == 0)
-          main_fb_.Bind(3, 1);
+          main_fb_.Bind(4, 1);
         else
-          soft_shadow_fb_[(i + 1) & 1].Bind(0, 1);
-        soft_shadow_shader_.SetInt("u_normal", 2);
+          ambient_fb_[(i + 1) & 1].Bind(0, 1);
+        ambient_filter_.SetInt("u_normal", 2);
         main_fb_.Bind(1, 2);
-        soft_shadow_shader_.SetInt("u_position", 3);
+        ambient_filter_.SetInt("u_position", 3);
         main_fb_.Bind(2, 3);
-        soft_shadow_shader_.SetInt("u_filter_radius", opt_.ss_filter_radius);
-        soft_shadow_shader_.SetInt("u_filter_cross", opt_.ss_cross_type!=3?opt_.ss_cross_type:(i&1)+1);
+        ambient_filter_.SetInt("u_filter_radius", opt_.ambient_filter_radius);
+        ambient_filter_.SetInt("u_filter_cross", opt_.ambient_filter_type!=3?opt_.ambient_filter_type:(i&1)+1);
       }
-      overlay_renderer_.End(soft_shadow_shader_);
-      soft_shadow_fb_[j].Unbind();
+      overlay_renderer_.End(ambient_filter_);
+      ambient_fb_[j].Unbind();
     }
   }
 
-  { //  copy current shadow
-    ss_old_fbs_[ss_current_old_].Bind();
+  if(opt_.diffuse_filter){ // diffuse denoise
+    for (int i = 0; i < opt_.diffuse_num_passes; ++i) {
+      int j = i + 1 == opt_.diffuse_num_passes ? 2 : i & 1;
+      diffuse_fb_[j].Bind();
+      arc::RendererAPI::SetClearColor(glm::vec4(opt_.bacground_color,0));
+      arc::RendererAPI::Clear();
+      overlay_renderer_.Begin(diffuse_filter_);
+      {
+        diffuse_filter_.SetFloat2(
+            "u_window_size",
+            {arc::Engine::window().width(), arc::Engine::window().height()});
+        diffuse_filter_.SetFloat("u_pos_th", opt_.diffuse_filter_position_treshold);
+        diffuse_filter_.SetInt("u_texture", 1);
+        if (i == 0)
+          main_fb_.Bind(3, 1);
+        else
+          diffuse_fb_[(i + 1) & 1].Bind(0, 1);
+        diffuse_filter_.SetInt("u_normal", 2);
+        main_fb_.Bind(1, 2);
+        diffuse_filter_.SetInt("u_position", 3);
+        main_fb_.Bind(2, 3);
+        diffuse_filter_.SetInt("u_filter_radius", opt_.diffuse_filter_radius);
+        diffuse_filter_.SetInt("u_filter_cross", opt_.diffuse_filter_type!=3?opt_.diffuse_filter_type:(i&1)+1);
+      }
+      overlay_renderer_.End(diffuse_filter_);
+      diffuse_fb_[j].Unbind();
+    }
+  }
+
+
+
+  { //  combine and copy current light
+    old_light_fbs_[ss_current_old_].Bind();
     arc::RendererAPI::Clear();
-    overlay_renderer_.Begin(copy_shader_);
+    overlay_renderer_.Begin(combine_light_shader_);
     {
-      copy_shader_.SetInt("u_texture", 1);
-      if (opt_.use_soft_shadow && opt_.ss_num_passes)
-        soft_shadow_fb_[2].Bind(0, 1);
+
+      combine_light_shader_.SetInt("u_diffuse", 1);
+      if (opt_.diffuse_filter && opt_.diffuse_num_passes)
+        diffuse_fb_[2].Bind(0, 1);
       else
         main_fb_.Bind(3, 1);
+
+      combine_light_shader_.SetInt("u_ambient", 2);
+      if (opt_.ambient_filter && opt_.ambient_num_passes)
+        ambient_fb_[2].Bind(0, 2);
+      else
+        main_fb_.Bind(4, 2);
+
+      combine_light_shader_.SetFloat("u_ambient_scalar", opt_.ambient_scalar);
+      combine_light_shader_.SetFloat("u_diffuse_scalar", opt_.diffuse_scalar);
+      combine_light_shader_.SetInt("u_diffuse", 1);
     }
-    overlay_renderer_.End(copy_shader_);
-    ss_old_fbs_[ss_current_old_].Unbind();
+    overlay_renderer_.End(combine_light_shader_);
+    old_light_fbs_[ss_current_old_].Unbind();
     ss_current_old_ = (ss_current_old_ + 1) % 10;
     if (ss_target_old_ != -1 && ss_current_old_ == ss_target_old_) {
       ss_target_old_ = -1;
     }
   }
-  { //  combine old shadows
 
-    median_fb_[2 - (opt_.use_soft_shadow && opt_.ss_num_passes&&opt_.median_num_passes)].Bind();
+  { //  combine old light
+    diffuse_fb_[2].Bind();
     arc::RendererAPI::Clear();
     overlay_renderer_.Begin(temporal_shader_);
     {
       int num = ss_target_old_ == -1
-                    ? opt_.ss_num_old
-                    : glm::min((ss_current_old_ - ss_target_old_ + 10) % 10,opt_.ss_num_old);
+                    ? opt_.temporal_num
+                    : glm::min((ss_current_old_ - ss_target_old_ + 10) % 10,opt_.temporal_num);
       int curr = (ss_current_old_ - 1 + 10) % 10;
       temporal_shader_.SetInt("u_num", num);
       logi("num: {0}", num);
       for (int i = 0; i < num; ++i) {
         std::string str = "u_old[" + std::to_string(i) + "]";
         temporal_shader_.SetInt(str, i + 1);
-        ss_old_fbs_[curr].Bind(0, i + 1);
+        old_light_fbs_[curr].Bind(0, i + 1);
         curr = (curr - 1 + 10) % 10;
       }
     }
     overlay_renderer_.End(temporal_shader_);
-    median_fb_[2 - (opt_.use_soft_shadow && opt_.ss_num_passes&&opt_.median_num_passes)].Unbind();
+    diffuse_fb_[2].Unbind();
   }
 
-  if (!opt_.new_median_shader&&opt_.use_soft_shadow&&opt_.ss_num_passes) { // median
-    for (int i = 0; i < opt_.median_num_passes; ++i) {
-      int j = i + 1 == opt_.median_num_passes ? 2 : i & 1;
-      median_fb_[j].Bind();
-      arc::RendererAPI::SetClearColor({1.0, 1.0, 1.0, 0});
-      arc::RendererAPI::Clear();
-      overlay_renderer_.Begin(median_shader_);
-      {
-        median_shader_.SetFloat2(
-            "u_window_size",
-            {arc::Engine::window().width(), arc::Engine::window().height()});
-        median_shader_.SetFloat("u_pos_th", opt_.ss_pos_th);
-        median_shader_.SetInt("u_texture", 1);
-        median_fb_[(i + 1) & 1].Bind(0, 1);
-        median_shader_.SetInt("u_normal", 2);
-        main_fb_.Bind(1, 2);
-        median_shader_.SetInt("u_position", 3);
-        main_fb_.Bind(2, 3);
-      }
-      overlay_renderer_.End(median_shader_);
-      median_fb_[j].Unbind();
-    }
-  }
 
-  if (opt_.new_median_shader&&opt_.use_soft_shadow&&opt_.ss_num_passes) { // median
-    for (int i = 0; i < opt_.median_num_passes; ++i) {
-      int j = i + 1 == opt_.median_num_passes ? 2 : i & 1;
-      median_fb_[j].Bind();
-      arc::RendererAPI::SetClearColor({1.0, 1.0, 1.0, 0});
-      arc::RendererAPI::Clear();
-      overlay_renderer_.Begin(new_median_shader_);
-      {
-        new_median_shader_.SetFloat2(
-            "u_window_size",
-            {arc::Engine::window().width(), arc::Engine::window().height()});
-        new_median_shader_.SetFloat("u_pos_th", opt_.ss_pos_th);
-        new_median_shader_.SetInt("u_texture", 1);
-        median_fb_[(i + 1) & 1].Bind(0, 1);
-        new_median_shader_.SetInt("u_normal", 2);
-        main_fb_.Bind(1, 2);
-        new_median_shader_.SetInt("u_position", 3);
-        main_fb_.Bind(2, 3);
-      }
-      overlay_renderer_.End(new_median_shader_);
-      median_fb_[j].Unbind();
-    }
-  }
 
   {
     if (opt_.use_fsaa)
       combine_fb_.Bind();
 
-    arc::RendererAPI::SetClearColor({1.0, 1.0, 1.0, 0});
+    arc::RendererAPI::SetClearColor(glm::vec4(opt_.bacground_color,0));
     arc::RendererAPI::Clear();
     overlay_renderer_.Begin(combine_shader_);
     {
       combine_shader_.SetInt("u_albedo", 1);
       main_fb_.Bind(0, 1);
-      combine_shader_.SetInt("u_diffuse", 2);
-      if (opt_.use_soft_shadow)
-        median_fb_[2].Bind(0, 2);
-      else
-        main_fb_.Bind(3, 2);
+      combine_shader_.SetInt("u_light", 2);
+      diffuse_fb_[2].Bind(0, 2);
       combine_shader_.SetInt("u_debug", 5);
-      main_fb_.Bind(4, 5);
+      main_fb_.Bind(5, 5);
       combine_shader_.SetInt("u_dither", 6);
       bayer_mat_tex_.Bind(6);
       combine_shader_.SetInt("u_dithering", opt_.dithering);
@@ -323,7 +318,7 @@ void RendererSystem::Update(arc::Scene &scene) {
   }
 
   if (opt_.use_fsaa) { // FSAA
-    arc::RendererAPI::SetClearColor({0.25, 0.25, 0.75, 1});
+    arc::RendererAPI::SetClearColor(glm::vec4(opt_.bacground_color,0));
     arc::RendererAPI::Clear();
     overlay_renderer_.Begin(fsaa_shader_);
     {
@@ -341,11 +336,11 @@ bool RendererSystem::OnWindowResize(int width, int height) {
 
   combine_fb_.Resize(width, height);
   for (int i = 0; i < 3; ++i)
-    soft_shadow_fb_[i].Resize(width, height);
+    ambient_fb_[i].Resize(width, height);
   for (int i = 0; i < 3; ++i)
-    median_fb_[i].Resize(width, height);
+    diffuse_fb_[i].Resize(width, height);
   for (int i = 0; i < 10; ++i)
-    ss_old_fbs_[i].Resize(width, height);
+    old_light_fbs_[i].Resize(width, height);
 
   return false;
 }

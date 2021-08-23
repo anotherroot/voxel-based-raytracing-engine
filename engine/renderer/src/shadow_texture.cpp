@@ -34,7 +34,7 @@ void ShadowTexture::Destroy() {
   texture_.Dispose();
 }
 
-void ShadowTexture::SetBits(const VoxelModel &model, const glm::mat4 &transform,
+void ShadowTexture::SetBits(const VoxelModels &model, const glm::mat4 &transform,
                             bool set) {
   uint8_t *mask = model.shadow_mask(0);
   auto size = model.raw_size(0);

@@ -9,6 +9,7 @@
 #include <glad/glad.h>
 namespace arc {
 
+void Bind(int id, unsigned int slot) { glBindTextureUnit(slot, id); }
 void Texture::Setup2D(const std::string &file_name, const TexConf &config) {
 
   int width, height, channels;
@@ -18,7 +19,6 @@ void Texture::Setup2D(const std::string &file_name, const TexConf &config) {
   width_ = width;
   height_ = height;
   unsigned char *data = image.get_data();
-  
 
   GLuint data_format = GL_RGB;
   GLuint internal_format = GL_RGB8;
@@ -35,7 +35,8 @@ void Texture::Setup2D(const std::string &file_name, const TexConf &config) {
   glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_REPEAT); //TODO: expand TexConfig
+  glTextureParameteri(id_, GL_TEXTURE_WRAP_T,
+                      GL_REPEAT); // TODO: expand TexConfig
   glTextureSubImage2D(id_, 0, 0, 0, width_, height_, data_format_,
                       GL_UNSIGNED_BYTE, data);
 }
@@ -148,8 +149,8 @@ void Texture::Dispose() {
 
 void Texture::set_data(void *data, int sw, int sh, int sd, int width,
                        int height, int depth) {
-  GLint rl,ih,sp,sr,si;
-  glGetIntegerv(GL_UNPACK_ROW_LENGTH,&rl);
+  GLint rl, ih, sp, sr, si;
+  glGetIntegerv(GL_UNPACK_ROW_LENGTH, &rl);
   glGetIntegerv(GL_UNPACK_IMAGE_HEIGHT, &ih);
   glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &sp);
   glGetIntegerv(GL_UNPACK_SKIP_ROWS, &sr);
@@ -161,9 +162,8 @@ void Texture::set_data(void *data, int sw, int sh, int sd, int width,
   glPixelStorei(GL_UNPACK_SKIP_ROWS, sh);
   glPixelStorei(GL_UNPACK_SKIP_IMAGES, sd);
 
-
   glTextureSubImage3D(id_, 0, sw, sh, sd, width, height, depth,
-                  internal_format_, data_format_, data);
+                      internal_format_, data_format_, data);
 
   glPixelStorei(GL_UNPACK_ROW_LENGTH, rl);
   glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, ih);

@@ -1,15 +1,13 @@
 #ifndef ARC_ENGINE_VOXEL_MODEL_H
 #define ARC_ENGINE_VOXEL_MODEL_H
 #include "voxel_renderer.h"
+#include "components.h"
+#include "unordered_map"
 namespace arc {
-class VoxelModel {
+class VoxelModels {
 
 public:
-  struct Bounds{
-    int min_x, max_x;
-    int min_y, max_y;
-    int min_z, max_z;
-  };
+
   void Setup(const std::string &file_path);
   void Dispose();
 
@@ -28,9 +26,7 @@ private:
   std::string file_path_;
 
   int num_instances_;
-  glm::vec3 *sizes_;
-  glm::vec3 *raw_sizes_;
-  glm::vec3 *offsets_;
+  std::vector<ModelComponent> models_;
   uint8_t **voxel_datas_;
   uint8_t **shadow_masks_;
   uint8_t **active_shadow_masks_;
@@ -38,6 +34,7 @@ private:
   std::vector<Material> materials_;
   Texture *textures_;
   int material_lookup_[256]{0};
+
 };
 } // namespace arc
 #endif // ARC_ENGINE_VOXEL_MODEL_H

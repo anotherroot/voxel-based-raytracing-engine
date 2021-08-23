@@ -9,12 +9,13 @@
 #include "renderer_api.h"
 #include "string"
 #include "structs.h"
+/* #include "imgui.h" */
 void Game::Init() {
   /* arc::Engine::window().SetVsync(false); */
   scene_.Setup("Main Scene");
 
   {
-    guy_model_.Setup("walterwhite.vox");
+    guy_model_.Setup("Top/top-long\ white\ shirt.vox");
     int num = 1;
     float rad = 8;
     float delta = 360 / (float)num;
@@ -28,8 +29,15 @@ void Game::Init() {
       arc::Rotate(guy, -90, {1, 0, 0});
       /* arc::Rotate(guy, -90, {0, 0, 1}); */
       arc::Rotate(guy, angle, {0, 0, 1});
+      
       arc::Translate(guy, {sin * rad, 0, cos * rad});
       walters_.push_back(guy);
+    }
+    int i=0;
+    for(auto &mat: guy_model_.materials()){
+      auto m = scene_.CreateEntity("u_materials["+std::to_string(i)+"]");
+      m.Add<arc::MaterialComponent>(mat);  
+      i++;
     }
   }
   {
@@ -145,7 +153,7 @@ void Game::ImGuiRender() {
     for (int i = 0; i < 3; ++i) {
       ImGui::Text(("fb "+std::to_string(i)).c_str());
       ImGui::Image(reinterpret_cast<ImTextureID>(
-                       renderer_system_.soft_shadow_fb_[i].GetAttachment(0)),
+                       renderer_system_.ambient_fb_[i].GetAttachment(0)),
                    ImVec2(arc::Engine::window().width() / 2,
                           arc::Engine::window().height() / 2),
                    ImVec2(0, 1), ImVec2(1, 0));
@@ -160,40 +168,56 @@ void Game::ImGuiRender() {
     for (int i = 0; i < 3; ++i) {
       ImGui::Text(("fb "+std::to_string(i)).c_str());
       ImGui::Image(reinterpret_cast<ImTextureID>(
-                       renderer_system_.median_fb_[i].GetAttachment(0)),
+                       renderer_system_.diffuse_fb_[i].GetAttachment(0)),
                    ImVec2(arc::Engine::window().width() / 2,
                           arc::Engine::window().height() / 2),
                    ImVec2(0, 1), ImVec2(1, 0));
     }
     ImGui::End();
   }
+  /* ImGui::ShowDemoWindow(); */
   ImGui::Begin("Options");
-  ImGui::InputInt("Num Rays", &renderer_system_.opt_.AO_num_rays);
-  ImGui::InputFloat("AO Ray dist", &renderer_system_.opt_.AO_ray_dist);
-  ImGui::Text("Scene Light values");
-  ImGui::ColorEdit3("color", (float *)&renderer_system_.opt_.ambient_color);
-  ImGui::InputFloat("diffuse scalar", &renderer_system_.opt_.diffuse_scalar);
-  ImGui::InputFloat("ambient scalar", &renderer_system_.opt_.ambient_scalar);
-  ImGui::InputFloat("specular scalar", &renderer_system_.opt_.specular_scalar);
-  ImGui::Text("Shadows");
-  int i = renderer_system_.opt_.use_soft_shadow;
-  ImGui::InputInt("Soft shadows", &i);
-  renderer_system_.opt_.use_soft_shadow = i;
-  ImGui::InputInt("Soft radius", &renderer_system_.opt_.ss_filter_radius);
-  ImGui::InputInt("Soft passes", &renderer_system_.opt_.ss_num_passes);
-  i = renderer_system_.opt_.ss_cross_type;
-  ImGui::InputInt("cross filter", &i);
-  renderer_system_.opt_.ss_cross_type = i;
-  ImGui::InputInt("Num old", &renderer_system_.opt_.ss_num_old);
-  ImGui::InputFloat("position treshold", &renderer_system_.opt_.ss_pos_th);
-  ImGui::Text("Post processing");
-  ImGui::InputInt("Median passes", &renderer_system_.opt_.median_num_passes);
-  ImGui::InputInt("Median radius", &renderer_system_.opt_.median_radius);
-  ImGui::InputInt("New median", &renderer_system_.opt_.new_median_shader);
-  ImGui::InputInt("Change lum", &renderer_system_.opt_.change_ambient_based_on_color);
-  ImGui::InputInt("dithering", &renderer_system_.opt_.dithering);
-  i = renderer_system_.opt_.use_fsaa;
-  ImGui::InputInt("FSAA", &i);
-  renderer_system_.opt_.use_fsaa = i;
+  
+  ImGui::ColorEdit3("Scene background", (float*)(&renderer_system_.opt_.bacground_color[0]));
+  ImGui::Text("Diffuse");
+
+  ImGui::InputFloat("Diffuse scalar", &renderer_system_.opt_.diffuse_scalar);
+  ImGui::InputInt("Soft shadows", &renderer_system_.opt_.use_soft_shadow);
+  ImGui::InputInt("Diffuse filter", &renderer_system_.opt_.diffuse_filter);
+  ImGui::InputInt("Num passes", &renderer_system_.opt_.diffuse_num_passes);
+  ImGui::InputFloat("Diff position treshold", &renderer_system_.opt_.diffuse_filter_position_treshold);
+  ImGui::InputInt("Radius", &renderer_system_.opt_.diffuse_filter_radius);
+  ImGui::InputInt("Type", &renderer_system_.opt_.diffuse_filter_type);
+
+  ImGui::Text("Ambient");
+  ImGui::InputFloat("Ambient scalar", &renderer_system_.opt_.ambient_scalar);
+  ImGui::InputInt("Num rays", &renderer_system_.opt_.ambient_num_rays);
+  ImGui::InputFloat("Ray distance", &renderer_system_.opt_.ambient_ray_distance);
+  ImGui::ColorEdit3("Color", (float*)(&renderer_system_.opt_.ambient_color[0]));
+  ImGui::InputInt("Based on color", &renderer_system_.opt_.ambient_based_on_color);
+  ImGui::InputInt("Ambient filter", &renderer_system_.opt_.ambient_filter);
+  ImGui::InputInt("Num passes", &renderer_system_.opt_.ambient_num_passes);
+  ImGui::InputFloat("Ambi position treshold", &renderer_system_.opt_.ambient_filter_position_treshold);
+  ImGui::InputInt("Radius", &renderer_system_.opt_.ambient_filter_radius);
+  ImGui::InputInt("Type", &renderer_system_.opt_.ambient_filter_type);
+
+
+  ImGui::Text("postprocessing");
+  ImGui::InputInt("Temporal num", &renderer_system_.opt_.temporal_num);
+  ImGui::InputInt("Dithering", &renderer_system_.opt_.dithering);
+  ImGui::InputInt("FSAA", &renderer_system_.opt_.use_fsaa);
+
+  ImGui::End();
+
+  ImGui::Begin("Materials");
+
+  auto materials =
+      scene_.registry()
+          .view<const  arc::MaterialComponent, arc::TagComponent>();
+  for (auto [entity, material, tag] : materials.each()) {
+    ImGui::ColorEdit3(tag.tag.c_str(), (float*)&(material.mat.color[0]));
+  }
+
+  
   ImGui::End();
 }

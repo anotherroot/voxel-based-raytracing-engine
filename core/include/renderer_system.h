@@ -25,40 +25,44 @@ public:
 private:
 
   arc::OverlayRenderer overlay_renderer_;
-  arc::Shader tracing_shader_, fsaa_shader_, combine_shader_, soft_shadow_shader_, copy_shader_, temporal_shader_, median_shader_,new_median_shader_;
+  arc::Shader tracing_shader_, fsaa_shader_, combine_shader_, ambient_filter_, diffuse_filter_, copy_shader_, temporal_shader_, combine_light_shader_;
   arc::Texture blue_noise_tex_, bayer_mat_tex_;
-  arc::FrameBuffer main_fb_, combine_fb_, soft_shadow_fb_[3], ss_old_fbs_[10], median_fb_[3];
+  arc::FrameBuffer main_fb_, combine_fb_, ambient_fb_[3], old_light_fbs_[10], diffuse_fb_[3];
   CameraController camera_;
 
   int ss_current_old_{0};
   int ss_target_old_{0};
 
   struct Options{
-    // ambinet oclusion
-    int AO_num_rays{2};
-    float AO_ray_dist{0.3};
-    // ambient light
-    glm::vec3 ambient_color{1,1,1};
-
-    int change_ambient_based_on_color{1};
+    glm::vec3 bacground_color{0,0,0};
+    // diffuse
+    int use_soft_shadow{1};// soft to hard shadows
+    int diffuse_filter{0}; // uses filter on diffuse
+    int diffuse_num_passes{2};
+    float diffuse_filter_position_treshold{0.08};
+    int diffuse_filter_radius{2};
+    int diffuse_filter_type{1};
     float diffuse_scalar{0.5};
+
+    // ambient
+    int ambient_filter{1}; // uses filter on ambient light
+    int ambient_num_passes{2};
+    float ambient_filter_position_treshold{0.08};
+    int ambient_filter_radius{8};
+    int ambient_filter_type{3};
+    float ambient_ray_distance{0.3};
+    int ambient_num_rays{2};
+    glm::vec3 ambient_color{1,1,1};
+    int ambient_based_on_color{1};
     float ambient_scalar{0.5};
-    float specular_scalar{0.5};
 
-    //shadow
-    bool use_soft_shadow{true};
-    int ss_num_passes{2};
-    int ss_filter_radius{15};
-    int ss_cross_type{3};
-    int ss_num_old{10};
-    float ss_pos_th{0.08};
+    //temporal
+    int temporal_num{10};
 
-    int median_num_passes{0};
-    int median_radius{2};
-    int new_median_shader{0};
+    //postprocessing
     int dithering{1}; 
+    int use_fsaa{true};
 
-    bool use_fsaa{true};
   };
   Options opt_;
 

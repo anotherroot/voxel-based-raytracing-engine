@@ -13,7 +13,7 @@ public:
   void Destroy();
   const Texture &texture() const { return texture_; }
   const glm::vec3 &size() const { return size_; }
-  void SetBits(const VoxelModel &model, const glm::mat4 &transform,
+  void SetBits(const VoxelModels &model, const glm::mat4 &transform,
                bool set = true); // TODO: add rotation and scale
   inline void Bind(int slot) {
     if (bounds_.set) {

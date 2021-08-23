@@ -9,6 +9,9 @@ namespace arc {
 
 class Texture {
 public:
+  static void Bind(int id, unsigned int slot);
+
+
   void Setup2D(const std::string& file_name,
              const TexConf &config);
   void Setup2D(int width, int height, void *data,

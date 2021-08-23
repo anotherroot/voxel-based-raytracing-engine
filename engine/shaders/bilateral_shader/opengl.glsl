@@ -38,6 +38,7 @@ const float gauss[25] = {
   1.0, 4.0,   6.0,  4.0,    1.0};
  
 
+
 float dx = 1.0/u_window_size.x;
 float dy = 1.0/u_window_size.y;
 

@@ -12,9 +12,8 @@ struct VoxelVertex {
   glm::vec3 pos;
   glm::vec3 tex_coord;
 };
-struct Material {
-  glm::vec3 color;
-};
+
+
 struct VoxelTransform{
   glm::mat4 transform;
   glm::vec3 size;

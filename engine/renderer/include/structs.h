@@ -1,6 +1,7 @@
 #ifndef ARC_ENGINE_STRUCTS_H
 #define ARC_ENGINE_STRUCTS_H
 #include "core.h"
+#include <glm.hpp>
 namespace arc {
 struct TexConf {
   enum InternalFormat { R, RG, RGB, RGBA, DEPTH, STENCIL };
@@ -26,6 +27,10 @@ struct FrameBufferConfig {
   uint samples;
   bool depth_stencil;
 };
-}; // namespace arc
+struct Material {
+  glm::vec4 color;
+
+};
+} // namespace arc
 
 #endif // ARC_ENGINE_STRUCTS_H

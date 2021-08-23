@@ -1,10 +1,10 @@
+#include "fstream"
 #include "voxel_model.h"
 #include "engine.h"
-#include "fstream"
 #define OGT_VOX_IMPLEMENTATION
 #include "ogt_vox.h"
 namespace arc {
-void VoxelModel::Setup(const std::string &file_path) {
+void VoxelModels::Setup(const std::string &file_path) {
   if (setup_)
     Dispose();
   file_path_ = Engine::config().asset_folder + file_path;
@@ -120,7 +120,8 @@ void VoxelModel::Setup(const std::string &file_path) {
               added[color] = true;
               materials_.push_back({{scene->palette.color[color].r / 255.0f,
                                      scene->palette.color[color].g / 255.0f,
-                                     scene->palette.color[color].b / 255.0f}});
+                                     scene->palette.color[color].b / 255.0f,
+                                     scene->palette.color[color].a / 255.0f}});
               material_lookup_[color] = materials_.size();
             }
             voxel_datas_[inst][i] = material_lookup_[color];
@@ -142,7 +143,7 @@ void VoxelModel::Setup(const std::string &file_path) {
     loge("Couldn't open model");
   }
 }
-void VoxelModel::Dispose() {
+void VoxelModels::Dispose() {
   if (!setup_)
     return;
   setup_ = false;

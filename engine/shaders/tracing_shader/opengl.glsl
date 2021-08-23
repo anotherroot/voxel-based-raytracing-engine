@@ -25,7 +25,8 @@ layout(location = 0) out vec4 out_albedo;
 layout(location = 1) out vec4 out_normal;
 layout(location = 2) out vec4 out_position;
 layout(location = 3) out vec4 out_diffuse;
-layout(location = 4) out vec4 out_debug;
+layout(location = 4) out vec4 out_ambient;
+layout(location = 5) out vec4 out_debug;
 
 
 in vec2 v_tex_coords;
@@ -33,8 +34,6 @@ in vec2 v_tex_coords;
 
 uniform sampler3D u_world_tex;
 uniform vec3 u_world_tex_size;
-uniform sampler3D u_object_tex;
-uniform vec3 u_obj_tex_size;
 
 uniform sampler2D u_blue_noise;
 uniform vec2 u_bn_size;
@@ -53,14 +52,14 @@ struct Object{
   mat4 transform;
   vec3 tex_size;
   vec3 vox_size;
-  vec3 s_tex;
-  vec3 e_tex;
+  vec3 inv_size;
+  sampler3D tex;
 };
-uniform Object u_objects[500];
+uniform Object u_objects[30];
 uniform int u_num_objects;
 
 struct Material{
-    vec3 color;
+    vec4 color;
 };
 uniform Material u_materials[256];
 
@@ -127,8 +126,8 @@ vec3 getTexCoords(in vec3 pos, in Object obj){
   return tex_coords;
 }
 
-uint GetVoxel(in vec3 tex_coords){
-    return uint(texture(u_object_tex,tex_coords)*255)  ;
+uint GetVoxel(in sampler3D tex, in vec3 tex_coords){
+    return uint(texture(tex,tex_coords)*255)  ;
 }
 
 
@@ -185,9 +184,8 @@ bool algoHit(in Ray ray, in Object obj,in float len)
 
     bool first = true;
     float dist = 0;
-    vec3 tex=(obj.e_tex-obj.s_tex)/obj.tex_size;
     while(true){
-        uint voxel = GetVoxel(coords/u_obj_tex_size+ 0.5*tex);
+        uint voxel = GetVoxel(obj.tex,coords*obj.inv_size);
         if(dist>=len) break;
         if( voxel != uint(0)){
           return true;
@@ -289,9 +287,8 @@ Hit algo(in Ray ray, in Object obj)
 
 
 
-    vec3 tex=(obj.e_tex-obj.s_tex)/obj.tex_size;
     while(true){
-        uint voxel = GetVoxel(coords/u_obj_tex_size+ 0.5*tex);
+        uint voxel = GetVoxel(obj.tex,coords*obj.inv_size);
         if( voxel != uint(0)){
             ray_hit.mat = int(voxel)-1;
             ray_hit.hit = true;
@@ -380,7 +377,7 @@ FirstPass firstPass(Ray in_ray){
           continue;
         }
         d.depth = t;
-        d.albedo = u_materials[hit.mat].color;
+        d.albedo = vec3(u_materials[hit.mat].color);
         d.normal = vec3(obj.transform*vec4(hit.normal,0));
       }
     }
@@ -461,12 +458,16 @@ SecondPass secondPass(in vec3 position, in vec3 normal, in vec3 albedo){
     }
 
 
-    
+    //specular
+    vec3 view_dir = normalize(u_cam.origin-position);
+    vec3 reflect_dir = reflect(-normalize(l_dir),normal);
+    float spec = pow(max(dot(view_dir,reflect_dir),0.0),32);
+
     Ray ray;
     ray.dir = normalize(l_dir);
     ray.origin = position+ray.dir*0.001;
     if(!hitObjects(ray, len)){
-      d.diffuse += light.color*diff*range_mul;
+      d.diffuse += (light.color+light.color*spec)*diff*range_mul;
       in_shadow = 0;
     }
 
@@ -531,7 +532,8 @@ void main()
 
     out_albedo = vec4(fp.albedo,1);
     out_normal = vec4(fp.normal,1);
-    out_diffuse = vec4(0.7*sp.diffuse+ 0.3*sp.ambient,1);
+    out_diffuse = vec4(sp.diffuse,1);
+    out_ambient = vec4(sp.ambient,1);
     /* out_diffuse = vec4(sp.ambient,1); */
     out_position = vec4(pos,1);
 
