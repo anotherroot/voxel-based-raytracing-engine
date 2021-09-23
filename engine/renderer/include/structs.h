@@ -28,8 +28,11 @@ struct FrameBufferConfig {
   bool depth_stencil;
 };
 struct Material {
-  glm::vec4 color;
+  glm::vec3 color;
 
+  float reflection;
+  float refraction;
+  float roughness;
 };
 } // namespace arc
 

@@ -37,7 +37,7 @@ public:
   void ShowCursor();
   float GetTime();
   void Resize(int width, int height);
-
+  void SetSize(int width, int height);
 private:
   GraphicsContext context_;
   void *window_{nullptr};

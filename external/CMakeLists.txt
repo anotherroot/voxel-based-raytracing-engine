@@ -35,6 +35,19 @@ add_subdirectory(freetype)
 
 # Build imgui
 add_subdirectory(imgui)
+
 target_include_directories(imgui PUBLIC glfw/include glad/include)
+
+# # imguIZMO
+# add_library(imguIZMO STATIC)
+# target_sources(
+#         imguIZMO
+#         PUBLIC
+#   imGuIZMO.quat/imGuIZMO.quat/imGuIZMOquat.cpp
+# )
+
+# target_include_directories(imguIZMO PUBLIC imGuIZMO.quat/imGuIZMO.quat imgui/imgui)
+# target_link_libraries(imguIZMO PUBLIC imgui)
+
 
 

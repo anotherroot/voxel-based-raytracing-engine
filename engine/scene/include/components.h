@@ -27,11 +27,11 @@ struct TransformComponent {
   TransformComponent(const glm::mat4 &t) : transform(t) {}
 
 };
-class VoxelModels;
 struct ModelComponent {
   
   glm::vec3 voxel_size{0.1,0.1,0.1}, raw_size, size;
   int id;
+  bool changed{false};
   ModelComponent() = default;
   ModelComponent(const ModelComponent &m) = default;
   ModelComponent(int i, const glm::vec3& vs, const glm::vec3& rs, const glm::vec3& s):id(i), voxel_size(vs), raw_size(rs), size(s){
@@ -40,6 +40,7 @@ struct ModelComponent {
 };
 struct MaterialComponent{
   Material mat;
+  bool changed{false};
   MaterialComponent() = default;
   MaterialComponent(const MaterialComponent &m) = default;
   MaterialComponent(const Material &m):mat(m){
@@ -47,14 +48,15 @@ struct MaterialComponent{
 };
 
 struct LightComponent{
-  float long_range, short_range, radius;
+  float range, radius;
   glm::vec3 color;
+  bool moded{0};
   LightComponent() = default;
   LightComponent(const LightComponent &m) = default;
-  LightComponent(float lr, float sr, const glm::vec3& col, float rad):long_range(lr), short_range(sr), color(col), radius(rad){
+  LightComponent(float r, const glm::vec3& col, float rad):range(r), color(col), radius(rad){
   }
-
 };
+
 
 struct BoxComponent{
   glm::vec3 color, size;

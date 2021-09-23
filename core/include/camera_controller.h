@@ -18,6 +18,7 @@ public:
     return false;
   } 
 private:
+  float speed_{5.0};
   bool moved_{false};
   bool fp_controller_;
   float fov_, yaw_, pitch_;

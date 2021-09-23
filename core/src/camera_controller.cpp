@@ -14,7 +14,7 @@ CameraController::CameraController()
   camera_.Setup(position_, look_at_, {0, 1, 0}, ratio, fov_, 0.1, 100);
 }
 void CameraController::Update(float delta_time) {
-  position_ += direction_ * delta_time * 5.0f;
+  position_ += direction_ * delta_time * speed_;
   camera_.SetView(position_, look_at_);
   moved_ |= glm::length(direction_)>0.1;
 }
@@ -64,6 +64,14 @@ bool CameraController::OnWindowResize(int width, int height) {
 bool CameraController::OnButtonDown(int button) { return false; }
 bool CameraController::OnButtonUp(int button) { return false; }
 bool CameraController::OnScroll(double x_offset, double y_offset) {
+  if(fp_controller_){
+  if(y_offset>0){
+    speed_*=1.10;
+  }
+  else{
+    speed_*=0.90;
+  }
+  }
   return false;
 }
 bool CameraController::OnMove(double x_pos, double y_pos) {

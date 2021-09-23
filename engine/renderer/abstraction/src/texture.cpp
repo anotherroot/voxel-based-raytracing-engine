@@ -9,7 +9,7 @@
 #include <glad/glad.h>
 namespace arc {
 
-void Bind(int id, unsigned int slot) { glBindTextureUnit(slot, id); }
+void Texture::Bind(int id, unsigned int slot) { glBindTextureUnit(slot, id); }
 void Texture::Setup2D(const std::string &file_name, const TexConf &config) {
 
   int width, height, channels;

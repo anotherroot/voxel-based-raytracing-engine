@@ -52,7 +52,8 @@ namespace arc{
 #define logi(...)      arc::impl::Log::client_logger()->info(__VA_ARGS__)
 #define logw(...)      arc::impl::Log::client_logger()->warn(__VA_ARGS__)
 #define loge(...)     arc::impl::Log::client_logger()->error(__VA_ARGS__)
-#define logf(...)     arc::impl::Log::client_logger()->fatal(__VA_ARGS__)
+/* #define logf(...)     arc::impl::Log::client_logger()->fatal(__VA_ARGS__) */
+
 #else
 
 #define LOG_INIT()

@@ -1,0 +1,3 @@
+/home/tilen/Projects/diploma/renderer/external/glad/build/CMakeFiles/rebuild_cache.dir
+/home/tilen/Projects/diploma/renderer/external/glad/build/CMakeFiles/edit_cache.dir
+/home/tilen/Projects/diploma/renderer/external/glad/build/CMakeFiles/glad.dir

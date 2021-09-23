@@ -18,11 +18,13 @@ public:
 
 private:
   arc::Scene scene_;
-  arc::VoxelModels guy_model_, floor_;
+  arc::VoxelModels models_;
+
   RendererSystem renderer_system_;
   arc::Entity light_;
   std::vector<arc::Entity> walters_;
 
+  arc::ModelComponent walter_;
   float num_frames_{0};
   float fps_{0};
   float second_{0};

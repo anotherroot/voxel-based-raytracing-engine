@@ -118,4 +118,10 @@ void Window::Resize(int width, int height) {
   data_.width = width;
   data_.height = height;
 }
+void Window::SetSize(int width, int height){
+  glfwSetWindowSize((GLFWwindow*)window_,width,height);
+  /* glfwGetWindowSize((GLFWwindow*)window_,&width,&height); */
+  /* data_.width = width; */
+  /* data_.height = height; */
+}
 } // namespace arc

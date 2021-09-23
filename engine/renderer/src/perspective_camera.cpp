@@ -19,8 +19,8 @@ void PerspectiveCamera::SetView(const glm::vec3 &position,
 
 void PerspectiveCamera::SetProjection(float screen_ratio, float fov,
                                       float z_near, float z_far) {
-  projection_ =
-      glm::perspective(glm::radians(fov), screen_ratio, z_near, z_far);
+  projection_ = glm::perspective(glm::radians(fov), screen_ratio, z_near, z_far);
   view_projection_ = projection_ * view_;
 }
+
 } // namespace arc

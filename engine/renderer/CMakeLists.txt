@@ -27,7 +27,6 @@ target_sources(arc_renderer
             src/voxel_model.cpp
             src/voxel_renderer.cpp
             src/perspective_camera.cpp
-            src/shadow_texture.cpp
             src/overlay_renderer.cpp
 
         )
@@ -39,6 +38,7 @@ target_link_libraries(arc_renderer
             glad
             stb_image
             arc_core
+            arc_scene
         )
 
 

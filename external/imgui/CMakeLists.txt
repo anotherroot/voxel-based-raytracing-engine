@@ -37,7 +37,7 @@ target_sources(imgui
         imgui/imgui_draw.cpp
         imgui/imgui_widgets.cpp
         imgui/imgui_tables.cpp
-        #imgui/imgui_demo.cpp
+        imgui/imgui_demo.cpp
         imgui/imgui.cpp)
 target_include_directories(imgui PUBLIC imgui imgui/backends)
 
